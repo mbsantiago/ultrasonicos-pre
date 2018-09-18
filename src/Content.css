@@ -1,0 +1,24 @@
+.content-column {
+  padding: 1px;
+  margin: 0;
+  height: 100%;
+}
+
+.row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.App-plot {
+  height: 100%;
+  width: 100%;
+}
+
+.graph-container {
+  padding-left: 0;
+  height: 100%;
+}
+
+.graph-row {
+  height: 100%;
+}

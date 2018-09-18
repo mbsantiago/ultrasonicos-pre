@@ -1,0 +1,25 @@
+.list-container{
+  height: inherit;
+  width: 100%;
+  overflow-y: scroll;
+}
+
+.List-item {
+  width: 100%;
+  font-size: 10px;
+}
+
+.List-external-container {
+  width: inherit;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.title-row {
+  height: 20px;
+}
+
+.List-row {
+  height: calc(100% - 20px);
+}
