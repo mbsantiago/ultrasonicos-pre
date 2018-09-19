@@ -4,9 +4,23 @@ import './List.css';
 
 class List extends Component {
   renderList() {
+    let disabled = this.props.disabled || [];
     let items = this.props.list.map((item) => {
       let color;
       let className = "List-item list-group-item list-group-item-action";
+
+      if (disabled.indexOf(item) >= 0) {
+        className += " disabled list-group-item-dark";
+        return (
+          <button
+            key={item}
+            type="button"
+            className={className}
+          >
+            {item}
+          </button>
+        );
+      }
 
       if (this.props.selectedItems.indexOf(item) >= 0) {
         color = this.props.color;

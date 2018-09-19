@@ -21,16 +21,18 @@ class App extends Component {
     this.state= {
       selections: [[]],
       currentSelection: 0,
-      conglomerateData: {},
-      anpShapes: null,
       anpShapesReady: false,
       categoriesLoaded: false,
-      categories: null,
       anp: null,
       selectedYears: [[]],
       selectedMonths: [[]],
       loading: false,
     };
+
+    this.categories = null;
+    this.anpShapes = null;
+    this.availableDates = {0: {}};
+    this.conglomerateData = {};
 
     this.onSelect = this.onSelect.bind(this);
     this.selectSuggestion = this.selectSuggestion.bind(this);
@@ -49,7 +51,7 @@ class App extends Component {
     if (!this.state.categoriesReady) return null;
 
     let selectedYears, selectedMonths, id, conglomerateData, recData, year, month, monthName, split;
-    let date_column = this.state.categories.date;
+    let date_column = this.categories.date;
     var data = {};
     let selections = this.state.selections;
 
@@ -62,15 +64,15 @@ class App extends Component {
       for (var j = 0; j < selections[group].length; j++) {
         id = selections[group][j];
 
-        if (id in this.state.conglomerateData) {
-          conglomerateData = this.state.conglomerateData[id];
+        if (id in this.conglomerateData) {
+          conglomerateData = this.conglomerateData[id];
 
           for (var k = 0; k < conglomerateData.length; k++) {
             recData = conglomerateData[k];
 
             split = recData[date_column].split('-').map((x) => parseInt(x, 10));
             year = split[0];
-            month = split[1];
+            month = split[1] - 1;
 
             if (selectedYears.indexOf(year) >= 0) {
               monthName = MONTHS[month];
@@ -100,9 +102,10 @@ class App extends Component {
         }
       })
       .then(data => {
+        this.categories = data;
         this.setState({
           categoriesReady: true,
-          categories: data});
+        });
       });
   }
 
@@ -117,8 +120,8 @@ class App extends Component {
       })
       .then(data => {
         if (data !== null) {
+          this.anpShapes = data;
           this.setState({
-            anpShapes: data,
             anpShapesReady: true});
         }
       });
@@ -137,14 +140,7 @@ class App extends Component {
       })
       .then(data => {
         if (data !== null) {
-          this.setState(
-            state => {
-              let conglomerateData = state.conglomerateData;
-              conglomerateData[id] = data;
-
-              return {conglomerateData: conglomerateData};
-            }
-          );
+          this.conglomerateData[id] = data;
         }
       })
       .then(() => this.checkFinishedLoading());
@@ -159,6 +155,7 @@ class App extends Component {
       selections[state.currentSelection] = [];
       selectedYears[state.currentSelection] = [];
       selectedMonths[state.currentSelection] = [];
+      this.availableDates[state.currentSelection] = {};
       return {
         selections: selections,
         selectedYears: selectedYears,
@@ -173,7 +170,7 @@ class App extends Component {
         let array = state.selections;
         let index = array[state.currentSelection].indexOf(id);
 
-        if (!(id in state.conglomerateData)) {
+        if (!(id in this.conglomerateData)) {
           this.loadConglomerateData(id);
         }
 
@@ -182,6 +179,8 @@ class App extends Component {
         } else {
           array[state.currentSelection].push(id);
         }
+
+        this.availableDates[state.currentSelection] = this.getAvailableDates(array[state.currentSelection]);
         return {selections: array};
       }
     );
@@ -189,7 +188,7 @@ class App extends Component {
 
   getSuggestions() {
     if (this.state.anpShapesReady) {
-      let names = this.state.anpShapes[0].features.map(
+      let names = this.anpShapes[0].features.map(
         feature => ({
           name: feature.properties.nombre,
           id: feature.properties.id_07})
@@ -218,6 +217,9 @@ class App extends Component {
       selectedYears.push([]);
       selectedMonths.push([]);
 
+      let groupNmb = selections.length - 1;
+      this.availableDates[groupNmb] = {};
+
       return {
         currentSelection: (selections.length - 1),
         selections: selections,
@@ -238,6 +240,7 @@ class App extends Component {
           selections: selections,
           selectedYears: selectedYears,
           selectedMonths: selectedMonths,
+          currentSelection: 0,
         };
       });
     }
@@ -247,31 +250,29 @@ class App extends Component {
     this.setState({currentSelection: g});
   }
 
-  getInfo() {
-    return null;
-  }
-
-  getAvailableDates(index) {
+  getAvailableDates(ids) {
     let split, year, month;
-    let ids = this.state.selections[index];
 
     if (!this.state.categoriesReady) return [];
-    let date_col = this.state.categories.date;
+    let date_col = this.categories.date;
 
     var dates = {};
 
     ids.map((id) => {
-      if (id in this.state.conglomerateData) {
-        this.state.conglomerateData[id].map((rec) => {
+      if (id in this.conglomerateData) {
+        this.conglomerateData[id].map((rec) => {
           split = rec[date_col].split("-");
           year = parseInt(split[0], 10);
-          month = parseInt(split[1], 10);
+
+          if (isNaN(year)) return null;
+
+          month = parseInt(split[1], 10) - 1;
 
           if (!(year in dates)) {
             dates[year] = new Set();
           }
 
-          dates[year].add(month);
+          dates[year].add(MONTHS[month]);
           return null;
         });
       }
@@ -285,47 +286,57 @@ class App extends Component {
     return dates;
   }
 
-  getAvailableYears(){
-    return null;
-  }
-
   toggleYear(year) {
-    this.setState(
-      state => {
-        let selected = state.selectedYears;
-        let currSelection = selected[this.state.currentSelection];
-        let index = currSelection.indexOf(year);
+    let dates = this.availableDates[this.state.currentSelection];
+    if (year in dates) {
+      this.setState(
+        state => {
+          let selected = state.selectedYears;
+          let currSelection = selected[this.state.currentSelection];
+          let index = currSelection.indexOf(year);
 
-        if (index >= 0) {
-          currSelection.splice(index, 1);
-        } else {
-          currSelection.push(year);
+          if (index >= 0) {
+            currSelection.splice(index, 1);
+          } else {
+            currSelection.push(year);
+          }
+
+          selected[this.state.currentSelection] = currSelection;
+          return {selectedYears: selected};
         }
-
-        selected[this.state.currentSelection] = currSelection;
-        return {selectedYears: selected};
-      }
-    );
+      );
+    }
   }
 
   toggleMonth(month) {
-    this.setState(
-      state => {
-        let selected = state.selectedMonths;
-        let currSelection = selected[this.state.currentSelection];
-        let index = currSelection.indexOf(month);
-
-        if (index >= 0) {
-          currSelection.splice(index, 1);
-        } else {
-          currSelection.push(month);
-        }
-
-        selected[this.state.currentSelection] = currSelection;
-
-        return {selectedMonths: selected};
+    let dates = this.availableDates[this.state.currentSelection];
+    let available = false;
+    for (let year in dates) {
+      if (dates[year].indexOf(month) >= 0) {
+        available = true;
+        break;
       }
-    );
+    }
+
+    if (available) {
+      this.setState(
+        state => {
+          let selected = state.selectedMonths;
+          let currSelection = selected[this.state.currentSelection];
+          let index = currSelection.indexOf(month);
+
+          if (index >= 0) {
+            currSelection.splice(index, 1);
+          } else {
+            currSelection.push(month);
+          }
+
+          selected[this.state.currentSelection] = currSelection;
+
+          return {selectedMonths: selected};
+        }
+      );
+    }
   }
 
   checkFinishedLoading() {
@@ -333,19 +344,19 @@ class App extends Component {
 
     let finished = true;
     for (var i=0; i < selection.length; i++) {
-      if (!(selection[i] in this.state.conglomerateData)) {
+      if (!(selection[i] in this.conglomerateData)) {
         finished = false;
       }
     }
 
     if (finished) {
+      this.availableDates[this.state.currentSelection] = this.getAvailableDates(this.state.selections[this.state.currentSelection]);
       this.setState({loading: false});
     }
   }
 
   render() {
     let selection = this.state.selections[this.state.currentSelection];
-    let availableDates = this.getAvailableDates(this.state.currentSelection);
 
     return (
       <div className="App">
@@ -363,19 +374,19 @@ class App extends Component {
             addGroup={this.addGroup}
             removeGroup={this.removeGroup}
             selectGroup={this.selectGroup}
-            availableDates={availableDates}
+            availableDates={this.availableDates[this.state.currentSelection]}
             selectedYears={this.state.selectedYears[this.state.currentSelection]}
             selectedMonths={this.state.selectedMonths[this.state.currentSelection]}
             toggleYear={this.toggleYear}
             toggleMonth={this.toggleMonth}
             currentGroup={this.state.currentSelection}
             groups={[...this.state.selections.keys()]}
-            anpShapes={this.state.anpShapes}
+            anpShapes={this.anpShapes}
             anpShapesReady={this.state.anpShapesReady}
           />
           <Content
             data={this.aggregateGroupData()}
-            categories={this.state.categories}
+            categories={this.categories}
             categoriesReady={this.state.categoriesReady}
           />
           <Footer/>

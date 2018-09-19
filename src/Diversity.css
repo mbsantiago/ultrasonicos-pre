@@ -1,0 +1,21 @@
+.type-row {
+  height: 20px;
+}
+
+.list-container-50 {
+  height: 50%;
+}
+
+.graph-row {
+  height: calc(100% - 20px);
+}
+
+.type-buttons {
+  height: 100%;
+}
+
+.type-button {
+  font-size: 10px;
+  height: 100%;
+  padding: 0;
+}

@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import List from './List';
-import BaseGraph from './BaseGraph';
+
+import ActivityPlot from './Activity';
+import CompositionPlot from './Composition';
+import DiversityPlot from './Diversity';
 
 import './Content.css';
 
@@ -21,7 +24,7 @@ class Content extends Component {
   }
 
   renderGraphList() {
-    const graphs = ['Actividad', 'Composicion (Sankey)'];
+    const graphs = ['Actividad', 'Composición', 'Diversidad'];
 
     return (
       <List
@@ -38,7 +41,21 @@ class Content extends Component {
     if (this.props.categoriesReady) {
       if (this.state.graph === 'Actividad') {
         return (
-          <BaseGraph
+          <ActivityPlot
+            data={this.props.data}
+            categories={this.props.categories}
+          />
+        );
+      } else if (this.state.graph === 'Composición') {
+        return (
+          <CompositionPlot
+            data={this.props.data}
+            categories={this.props.categories}
+          />
+        );
+      } else if (this.state.graph === 'Diversidad') {
+        return (
+          <DiversityPlot
             data={this.props.data}
             categories={this.props.categories}
           />

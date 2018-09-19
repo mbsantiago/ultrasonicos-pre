@@ -3,7 +3,7 @@ import Plot from 'react-plotly.js';
 
 import List from './List';
 import { MONTHS } from './utils';
-import './BaseGraph.css';
+import './Activity.css';
 
 
 function addRows(row1, row2) {
@@ -11,7 +11,7 @@ function addRows(row1, row2) {
 }
 
 
-class BaseGraph extends Component {
+class ActivityPlot extends Component {
   constructor(props) {
     super(props);
 
@@ -30,28 +30,20 @@ class BaseGraph extends Component {
     this.state = {
       selectedLevel: level,
       selectedCategories: selectedCategories,
-      selectedValue: 'Pasos por hora',
       selectedAggregation: 'Hora',
+      selectedDisaggregation: 'Hora',
+      disabledDisaggregations: [],
       type: 'box',
     };
 
     this.selectLevel = this.selectLevel.bind(this);
-    this.selectCategory = this.selectCategory.bind(this);
+    this.selectDisaggregation = this.selectDisaggregation.bind(this);
     this.selectAggregation = this.selectAggregation.bind(this);
-    this.selectValue = this.selectValue.bind(this);
 
-    this.getDatum = (datum) => {
-      return parseInt(datum.split('-').pop(), 10);
-    };
+    this.selectCategory = this.selectCategory.bind(this);
 
-    this.date_col = props.categories.date;
-    this.time_col = props.categories.time;
-
-    this.getKey = (row) => {
-      let date = row[this.date_col];
-      let time = row[this.time_col].split(':')[0];
-      return `${date}-${time}`;
-    };
+    this.getAggregator = this.getAggregationFunction('Hora');
+    this.getDisaggregator = this.getDisaggregationFunction('Hora');
   }
 
   aggregateData() {
@@ -69,7 +61,7 @@ class BaseGraph extends Component {
 
       for (i = 0; i < groupData.length; i++) {
         row = groupData[i].slice();
-        key = this.getKey(row);
+        key = this.getAggregator(row);
 
         row[date_col] = 0;
         row[time_col] = 0;
@@ -103,7 +95,6 @@ class BaseGraph extends Component {
     let mapping = this.props.categories[this.state.selectedLevel];
     let plotData = [];
 
-
     for (var group in data){
       groupData = data[group];
 
@@ -120,7 +111,7 @@ class BaseGraph extends Component {
 
           for (i = 0; i < groupData.length; i++) {
             row = groupData[i].slice();
-            datum = this.getDatum(row.pop());
+            datum = this.getDisaggregator(row.pop());
             x.push(datum);
             y.push(row[index]);
           }
@@ -129,7 +120,7 @@ class BaseGraph extends Component {
 
           for (i = 0; i < groupData.length; i++) {
             row = groupData[i].slice();
-            datum = this.getDatum(row.pop());
+            datum = this.getDisaggregator(row.pop());
 
             if (!(datum in agg)) {
               agg[datum] =  [];
@@ -164,7 +155,7 @@ class BaseGraph extends Component {
           marker: {color: color},
         };
 
-        if (this.state.type) {
+        if (this.state.type === 'bar') {
           trace['error_y'] = {
             type: 'data',
             array: err,
@@ -178,10 +169,46 @@ class BaseGraph extends Component {
     return plotData;
   }
 
+  getAggregationFunction(agg) {
+    let date_col = this.props.categories.date;
+    let time_col = this.props.categories.time;
+
+    if (agg === 'Hora') {
+      return (row) => {
+        let date = row[date_col];
+        let time = row[time_col].split(':')[0];
+        return `${date}-${time}`;
+      };
+    } else if (agg === 'Día') {
+      return (row) => {
+        let date = row[date_col];
+        return date;
+      };
+    }
+  }
+
+  getDisaggregationFunction(agg){
+    if (agg === 'Hora') {
+      return (datum) => {
+        return parseInt(datum.split('-').pop(), 10);
+      };
+    } else if (agg === 'Año') {
+      return (datum) => {
+        return parseInt(datum.split('-')[0], 10);
+      };
+    } else if (agg === 'Mes') {
+      return (datum) => {
+        return parseInt(datum.split('-')[1], 10);
+      };
+    } else if (agg === 'No desagregar') {
+      return (datum) => 'Actividad';
+    }
+  }
+
   getLayout() {
     var layout = {
       yaxis: {
-        title: this.state.selectedValue,
+        title: 'Pasos por ' + this.state.selectedAggregation,
         zeroline: false
       },
       margin: {
@@ -254,29 +281,13 @@ class BaseGraph extends Component {
     );
   }
 
-  selectAggregation(agg) {
-    this.selectValue('Pasos por hora');
-    this.setState({selectedAggregation: agg});
-
-    if (agg === 'Hora') {
-      this.getDatum = (datum) => {
-        return parseInt(datum.split('-').pop(), 10);
-      };
-    } else if (agg === 'Año') {
-      this.getDatum = (datum) => {
-        return parseInt(datum.split('-')[0], 10);
-      };
-    } else if (agg === 'Mes') {
-      this.getDatum = (datum) => {
-        return parseInt(datum.split('-')[1], 10);
-      };
-    } else if (agg === 'Todo') {
-      this.getDatum = (datum) => 'Todo';
-    }
+  selectDisaggregation(agg) {
+    this.getDisaggregator = this.getDisaggregationFunction(agg);
+    this.setState({selectedDisaggregation: agg});
   }
 
   getXAxisLayout() {
-    if (this.state.selectedAggregation === 'Mes') {
+    if (this.state.selectedDisaggregation === 'Mes') {
       return {
         tickmode: 'array',
         tickvals: [...MONTHS.keys()],
@@ -287,48 +298,49 @@ class BaseGraph extends Component {
     }
   }
 
-  renderAggregation() {
-    let aggregationLevels = ['Hora', 'Año', 'Mes', 'Todo'];
+  renderDisaggregation() {
+    let disaggregationLevels = ['Hora', 'Mes', 'Año', 'No desagregar'];
     return (
       <List
-        list={aggregationLevels}
-        title={'Aggregación'}
-        onClick={this.selectAggregation}
-        selectedItems={this.state.selectedAggregation}
+        list={disaggregationLevels}
+        title={'Desagregar por'}
+        onClick={this.selectDisaggregation}
+        selectedItems={this.state.selectedDisaggregation}
         color={' list-group-item-success'}
+        disabled={this.state.disabledDisaggregations}
       />
     );
   }
 
-  selectValue(val) {
-    let agg = this.state.selectedAggregation;
+  selectAggregation(agg) {
+    let disabled;
+    if (agg === 'Hora') {
+      disabled = [];
+    } else if (agg === 'Día') {
+      disabled = ['Hora'];
+    }
 
-    if (agg === 'Hora') return null;
+    this.getAggregator = this.getAggregationFunction(agg);
+    this.setState({
+      selectedAggregation: agg,
+      disabledDisaggregations: disabled
+    });
 
-    this.setState({selectedValue: val});
-
-    if (val === 'Pasos por hora') {
-      this.getKey = (row) => {
-        let date = row[this.date_col];
-        let time = row[this.time_col].split(':')[0];
-        return `${date}-${time}`;
-      };
-    } else if (val === 'Pasos por día') {
-      this.getKey = (row) => {
-        let date = row[this.date_col];
-        return date;
-      };
+    if (disabled.indexOf(this.state.selectedDisaggregation) >= 0) {
+      if (agg === 'Día') {
+        this.selectDisaggregation('Mes');
+      }
     }
   }
 
-  renderValue() {
-    let values = ['Pasos por hora', 'Pasos por día'];
+  renderAggregation() {
+    let aggregations = ['Hora', 'Día'];
     return (
       <List
-        list={values}
-        title={'Valores'}
-        onClick={this.selectValue}
-        selectedItems={this.state.selectedValue}
+        list={aggregations}
+        title={'Agregar por'}
+        onClick={this.selectAggregation}
+        selectedItems={this.state.selectedAggregation}
         color={' list-group-item-danger'}
       />
     );
@@ -366,7 +378,7 @@ class BaseGraph extends Component {
     return (
       <div className="container-fluid graph-container">
         <div className="row graph-row">
-          <div className="col-1 content-column">
+          <div className="col-2 content-column">
             <div className='list-container-50'>
               {this.renderLevels()}
             </div>
@@ -379,10 +391,10 @@ class BaseGraph extends Component {
               {this.renderCategories()}
             </div>
             <div className='list-container-50'>
-              {this.renderValue()}
+              {this.renderDisaggregation()}
             </div>
           </div>
-          <div className="col-9 plot-container">
+          <div className="col-8 plot-container">
             <div className="row type-row">
               {this.renderTypeButtons()}
             </div>
@@ -396,4 +408,4 @@ class BaseGraph extends Component {
   }
 }
 
-export default BaseGraph;
+export default ActivityPlot;

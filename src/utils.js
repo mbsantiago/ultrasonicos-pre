@@ -4,7 +4,8 @@ const DEFAULT_VIEWPORT = {
   center: [23.950464, -102.532867],
   zoom: 5,
 };
-const CONGLOMERATES_URL = "http://nodo5:9312/conglomerados";
+const CONGLOMERATES_URL = "http://nodo5:9312/metadata/conglomerados";
+const LABELLING_STRUCTURE_URL = "http://nodo5:9312/metadata/labelling_structure";
 const ANPS_URL = "http://snmb.conabio.gob.mx/api_anps/v1/anps";
 const MONTHS = [
   "Enero",
@@ -32,5 +33,6 @@ export {
   CONGLOMERATES_URL,
   HOURS,
   YEARS,
-  DATA_STRUCTURE_URL
+  DATA_STRUCTURE_URL,
+  LABELLING_STRUCTURE_URL,
 };

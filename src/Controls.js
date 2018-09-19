@@ -24,7 +24,7 @@ class Controls extends Component {
     let months = new Set();
     this.props.selectedYears.map((year) => {
       this.props.availableDates[year].map((month) => {
-        months.add(MONTHS[month]);
+        months.add(month);
         return null;
       });
       return null;
