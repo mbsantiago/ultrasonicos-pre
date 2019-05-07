@@ -76,3 +76,7 @@ html, body {
 .App-controls-container{
   height: 100%;
 }
+
+.app-tooltip {
+  width: 150px;
+}

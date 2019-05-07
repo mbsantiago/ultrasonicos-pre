@@ -40,6 +40,7 @@ class Mapa extends Component {
 
   componentDidUpdate() {
     this.selectAnp();
+    this.selectGroup();
   }
 
   loadConglomerates() {
@@ -74,7 +75,7 @@ class Mapa extends Component {
         let point = [-d.grabadora_lon, d.grabadora_lat];
         let isIn = turf.booleanPointInPolygon(point, feature);
         if (isIn) {
-          if (this.props.selection.indexOf(d.conglomerado_id) < 0) {
+          if (!this.props.selection.has(d.conglomerado_id)) {
             this.props.onSelect(d.conglomerado_id);
           }
         }
@@ -105,10 +106,29 @@ class Mapa extends Component {
   }
 
   getConglomerateColor(d) {
-    if (this.props.selection.indexOf(d.conglomerado_id) >= 0) {
+    if (this.props.selection.has(d.conglomerado_id)) {
       return "orange";
     } else {
       return "blue";
+    }
+  }
+
+  centerOnConglomerates() {
+    if (this.state.conglomeratesDataReady) {
+      if (this.props.selection.size > 0){
+        let conglomerates = this.state.conglomeratesData.filter(d => this.props.selection.has(d.conglomerado_id));
+        let coordinates = conglomerates.map(d => {
+          let lat = d.grabadora_lat;
+          let lon = d.grabadora_lon;
+          return [-lon, lat];
+        });
+
+        let [minLon, minLat, maxLon, maxLat] = turf.bbox(turf.buffer(turf.multiPoint(coordinates), 50));
+        this.mapRef.current.leafletElement.flyToBounds([
+          [minLat, minLon],
+          [maxLat, maxLon]
+        ]);
+      }
     }
   }
 
@@ -222,7 +242,14 @@ class Mapa extends Component {
   }
 
   onViewportChanged(viewport) {
-    this.setState({ viewport });
+    this.setState({viewport});
+  }
+
+  selectGroup() {
+    if (this.props.centerOnGroup) {
+      this.centerOnConglomerates();
+      this.props.doneCentering();
+    }
   }
 
   selectAnp() {
@@ -243,7 +270,6 @@ class Mapa extends Component {
     let basicTileLayer = this.renderBasicTileLayer();
     let layerControls = this.renderLayerControls();
     let homeButton = this.renderHomeButton();
-
 
     return (
       <Map

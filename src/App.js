@@ -14,24 +14,52 @@ import {
 import './App.css';
 
 
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : ((r & 0x3) | 0x8);
+    return v.toString(16);
+  });
+}
+
 class App extends Component {
   constructor(props) {
     super(props);
 
+    let group = uuidv4();
+    let groups = new Set([group]);
+
+    let selections = {};
+    selections[group] = new Set();
+
+    let selectedYears = {};
+    selectedYears[group] = new Set();
+
+    let selectedMonths = {};
+    selectedMonths[group] = new Set();
+
+    let groupNames = {};
+    groupNames[group] = 'G-' + group.slice(0, 2);
+
+    this.availableDates = {};
+    this.availableDates[group] = {};
+
     this.state= {
-      selections: [[]],
-      currentSelection: 0,
+      groups: groups,
+      groupNames: groupNames,
+      selections: selections,
+      currentSelection: group,
+      selectedYears: selectedYears,
+      selectedMonths: selectedMonths,
       anpShapesReady: false,
       categoriesLoaded: false,
       anp: null,
-      selectedYears: [[]],
-      selectedMonths: [[]],
+      centerOnGroup: false,
       loading: false,
     };
 
     this.categories = null;
     this.anpShapes = null;
-    this.availableDates = {0: {}};
+    this.anpSuggestions = [];
     this.conglomerateData = {};
 
     this.onSelect = this.onSelect.bind(this);
@@ -42,47 +70,49 @@ class App extends Component {
     this.selectGroup = this.selectGroup.bind(this);
     this.addGroup = this.addGroup.bind(this);
     this.removeGroup = this.removeGroup.bind(this);
+    this.renameGroup = this.renameGroup.bind(this);
 
     this.toggleYear = this.toggleYear.bind(this);
     this.toggleMonth = this.toggleMonth.bind(this);
+
+    this.doneCentering = this.doneCentering.bind(this);
   }
 
   aggregateGroupData() {
+    let group;
+
     if (!this.state.categoriesReady) return null;
 
-    let selectedYears, selectedMonths, id, conglomerateData, recData, year, month, monthName, split;
+    let selectedYears, selectedMonths, conglomerateData, recData, year, month, monthName, split;
     let date_column = this.categories.date;
     var data = {};
     let selections = this.state.selections;
 
-    for (var group = 0; group < selections.length; group++) {
+    for (group in selections) {
       selectedYears = this.state.selectedYears[group];
       selectedMonths = this.state.selectedMonths[group];
 
       data[group] = [];
-
-      for (var j = 0; j < selections[group].length; j++) {
-        id = selections[group][j];
-
+      selections[group].forEach((id) => {
         if (id in this.conglomerateData) {
           conglomerateData = this.conglomerateData[id];
 
           for (var k = 0; k < conglomerateData.length; k++) {
             recData = conglomerateData[k];
 
-            split = recData[date_column].split('-').map((x) => parseInt(x, 10));
-            year = split[0];
-            month = split[1] - 1;
+            split = recData[date_column].split('-');
+            year = parseInt(split[0], 10);
+            month = parseInt(split[1], 10) - 1;
 
-            if (selectedYears.indexOf(year) >= 0) {
+            if (selectedYears.has(year)) {
               monthName = MONTHS[month];
-              if (selectedMonths.indexOf(monthName) >= 0) {
+              if (selectedMonths.has(monthName)) {
                 data[group].push(recData);
               }
             }
           }
         }
-      }
+      });
     }
     return data;
   }
@@ -123,6 +153,7 @@ class App extends Component {
           this.anpShapes = data;
           this.setState({
             anpShapesReady: true});
+          this.anpSuggestions = this.getSuggestions();
         }
       });
   }
@@ -152,10 +183,11 @@ class App extends Component {
       let selectedYears = state.selectedYears;
       let selectedMonths = state.selectedMonths;
 
-      selections[state.currentSelection] = [];
-      selectedYears[state.currentSelection] = [];
-      selectedMonths[state.currentSelection] = [];
+      selections[state.currentSelection].clear();
+      selectedYears[state.currentSelection].clear();
+      selectedMonths[state.currentSelection].clear();
       this.availableDates[state.currentSelection] = {};
+
       return {
         selections: selections,
         selectedYears: selectedYears,
@@ -167,32 +199,36 @@ class App extends Component {
   onSelect(id) {
     this.setState(
       state => {
-        let array = state.selections;
-        let index = array[state.currentSelection].indexOf(id);
+        let all_selections = state.selections;
+        let selection = all_selections[state.currentSelection];
 
         if (!(id in this.conglomerateData)) {
           this.loadConglomerateData(id);
         }
 
-        if (index >= 0) {
-          array[state.currentSelection].splice(index, 1);
+        if (selection.has(id)) {
+          selection.delete(id);
         } else {
-          array[state.currentSelection].push(id);
+          selection.add(id);
         }
 
-        this.availableDates[state.currentSelection] = this.getAvailableDates(array[state.currentSelection]);
-        return {selections: array};
+        this.availableDates[state.currentSelection] = this.getAvailableDates(selection);
+        return {selections: all_selections};
       }
     );
   }
 
   getSuggestions() {
     if (this.state.anpShapesReady) {
-      let names = this.anpShapes[0].features.map(
-        feature => ({
-          name: feature.properties.nombre,
-          id: feature.properties.id_07})
-      );
+      let names = this.anpShapes[0].features
+        .filter(
+          feature => feature.geometry !== null
+        )
+        .map(
+          feature => ({
+            name: feature.properties.nombre,
+            id: feature.properties.id_07})
+        );
       return names;
     } else {
       return [];
@@ -212,16 +248,22 @@ class App extends Component {
       let selections = state.selections;
       let selectedYears = state.selectedYears;
       let selectedMonths = state.selectedMonths;
+      let groups = state.groups;
+      let groupNames = state.groupNames;
 
-      selections.push([]);
-      selectedYears.push([]);
-      selectedMonths.push([]);
+      let newGroup = uuidv4();
 
-      let groupNmb = selections.length - 1;
-      this.availableDates[groupNmb] = {};
+      groups.add(newGroup);
+      selections[newGroup] = new Set();
+      selectedYears[newGroup] = new Set();
+      selectedMonths[newGroup] = new Set();
+      groupNames[newGroup] = 'G-' + newGroup.slice(0, 2);
+
+      this.availableDates[newGroup] = {};
 
       return {
-        currentSelection: (selections.length - 1),
+        currentSelection: newGroup,
+        groups: groups,
         selections: selections,
         selectedYears: selectedYears,
         selectedMonths: selectedMonths,
@@ -230,24 +272,68 @@ class App extends Component {
   }
 
   removeGroup() {
-    if (this.state.selections.length > 1){
-      this.setState((state) => {
-        let selections = state.selections.slice(0, -1);
-        let selectedYears = state.selectedYears.slice(0, -1);
-        let selectedMonths = state.selectedMonths.slice(0, -1);
+    this.setState((state) => {
+      let newSelection;
 
-        return {
-          selections: selections,
-          selectedYears: selectedYears,
-          selectedMonths: selectedMonths,
-          currentSelection: 0,
-        };
-      });
-    }
+      let group = state.currentSelection;
+      let groups = state.groups;
+
+      let groupNames = state.groupNames;
+      let selections = state.selections;
+      let selectedYears = state.selectedYears;
+      let selectedMonths = state.selectedMonths;
+
+      groups.delete(group);
+      delete groupNames[group];
+      delete selections[group];
+      delete selectedYears[group];
+      delete selectedMonths[group];
+      delete this.availableDates[group];
+
+      if (groups.size === 0) {
+        newSelection = uuidv4();
+
+        groups.add(newSelection);
+        selections[newSelection] = new Set();
+        selectedYears[newSelection] = new Set();
+        selectedMonths[newSelection] = new Set();
+        groupNames[newSelection] = 'G-' + newSelection.slice(0, 2);
+
+        this.availableDates[newSelection] = {};
+      } else {
+        newSelection = groups.values().next().value;
+      }
+
+      return {
+        groups: groups,
+        selections: selections,
+        selectedYears: selectedYears,
+        selectedMonths: selectedMonths,
+        currentSelection: newSelection,
+      };
+    });
   }
 
   selectGroup(g) {
-    this.setState({currentSelection: g});
+    this.setState(state => {
+      if (state.selections[g].size > 0) {
+        return {
+          currentSelection: g,
+          centerOnGroup: true};
+      } else {
+        return {currentSelection: g};
+      }
+    });
+  }
+
+  renameGroup(name) {
+    this.setState(state => {
+      let group = state.currentSelection;
+      let groupNames = state.groupNames;
+
+      groupNames[group] = name;
+      return {groupNames: groupNames};
+    });
   }
 
   getAvailableDates(ids) {
@@ -258,7 +344,7 @@ class App extends Component {
 
     var dates = {};
 
-    ids.map((id) => {
+    ids.forEach((id) => {
       if (id in this.conglomerateData) {
         this.conglomerateData[id].map((rec) => {
           split = rec[date_col].split("-");
@@ -279,26 +365,22 @@ class App extends Component {
       return null;
     });
 
-    for (year in dates) {
-      dates[year] = [...dates[year].values()];
-    }
-
     return dates;
   }
 
   toggleYear(year) {
     let dates = this.availableDates[this.state.currentSelection];
+
     if (year in dates) {
       this.setState(
         state => {
           let selected = state.selectedYears;
           let currSelection = selected[this.state.currentSelection];
-          let index = currSelection.indexOf(year);
 
-          if (index >= 0) {
-            currSelection.splice(index, 1);
+          if (currSelection.has(year)) {
+            currSelection.delete(year);
           } else {
-            currSelection.push(year);
+            currSelection.add(year);
           }
 
           selected[this.state.currentSelection] = currSelection;
@@ -311,8 +393,9 @@ class App extends Component {
   toggleMonth(month) {
     let dates = this.availableDates[this.state.currentSelection];
     let available = false;
+
     for (let year in dates) {
-      if (dates[year].indexOf(month) >= 0) {
+      if (dates[year].has(month)) {
         available = true;
         break;
       }
@@ -323,12 +406,11 @@ class App extends Component {
         state => {
           let selected = state.selectedMonths;
           let currSelection = selected[this.state.currentSelection];
-          let index = currSelection.indexOf(month);
 
-          if (index >= 0) {
-            currSelection.splice(index, 1);
+          if (currSelection.has(month)) {
+            currSelection.delete(month);
           } else {
-            currSelection.push(month);
+            currSelection.add(month);
           }
 
           selected[this.state.currentSelection] = currSelection;
@@ -337,6 +419,10 @@ class App extends Component {
         }
       );
     }
+  }
+
+  doneCentering(){
+    this.setState({centerOnGroup: false});
   }
 
   checkFinishedLoading() {
@@ -361,7 +447,7 @@ class App extends Component {
     return (
       <div className="App">
         <Header
-          sugestions={this.getSuggestions()}
+          sugestions={this.anpSuggestions}
           selectSuggestion={this.selectSuggestion}
           loading={this.state.loading}/>
         <div className="container-fluid App-container">
@@ -379,13 +465,18 @@ class App extends Component {
             selectedMonths={this.state.selectedMonths[this.state.currentSelection]}
             toggleYear={this.toggleYear}
             toggleMonth={this.toggleMonth}
+            groupNames={this.state.groupNames}
             currentGroup={this.state.currentSelection}
-            groups={[...this.state.selections.keys()]}
+            groups={this.state.groups}
             anpShapes={this.anpShapes}
             anpShapesReady={this.state.anpShapesReady}
+            centerOnGroup={this.state.centerOnGroup}
+            doneCentering={this.doneCentering}
+            renameGroup={this.renameGroup}
           />
           <Content
             data={this.aggregateGroupData()}
+            groupNames={this.state.groupNames}
             categories={this.categories}
             categoriesReady={this.state.categoriesReady}
           />

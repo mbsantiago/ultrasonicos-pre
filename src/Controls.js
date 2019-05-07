@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { MONTHS, YEARS } from './utils';
+import Tooltip from 'rc-tooltip';
 
 import './Controls.css';
 
@@ -9,28 +10,61 @@ class Controls extends Component {
     super(props);
 
     this.state = {
-      strict: false
+      value: ''
     };
 
-    this.handleStrictChange = this.handleStrictChange.bind(this);
+    this.handleChange = this.handleChange.bind(this);
+    this.availableMonths = new Set();
   }
 
-  handleStrictChange(strict) {
-    this.setState({strict});
-  }
-
-
-  getAvailableMonths() {
+  updateAvailableMonths() {
     let months = new Set();
-    this.props.selectedYears.map((year) => {
-      this.props.availableDates[year].map((month) => {
+
+    this.props.selectedYears.forEach((year) => {
+      this.props.availableDates[year].forEach((month) => {
         months.add(month);
         return null;
       });
       return null;
     });
 
-    return [...months.values()];
+    this.availableMonths = months;
+  }
+
+  getMonthColor(month) {
+    let color;
+
+    if (this.availableMonths.has(month)) {
+      if (this.props.selectedMonths.has(month)) {
+        color = ' bg-warning';
+      } else {
+        color = ' bg-light';
+      }
+    } else {
+      color = ' bg-dark text-white';
+    }
+
+    return color;
+  }
+
+  getMonthClass(i, j) {
+    let round = "";
+
+    if (i === 0) {
+      if (j === 0) {
+        round = " rounded-top-left";
+      } else if (j === 2) {
+        round = " rounded-top-right";
+      }
+    } else if (i === 3) {
+      if (j === 0) {
+        round = " rounded-bottom-left";
+      } else if (j === 2) {
+        round = " rounded-bottom-right";
+      }
+    }
+
+    return round;
   }
 
   renderCalendar() {
@@ -41,35 +75,12 @@ class Controls extends Component {
       MONTHS.slice(9, 12),
     ];
 
-    let activeMonths = this.getAvailableMonths();
+    this.updateAvailableMonths();
 
     let rows = months.map((row, i) => {
-      let color;
       let columns = row.map((month, j) => {
-        let round = '';
-        if (activeMonths.indexOf(month) >= 0) {
-          if (this.props.selectedMonths.indexOf(month) >= 0) {
-            color = ' bg-warning';
-          } else {
-            color = ' bg-light';
-          }
-        } else {
-          color = ' bg-dark text-white';
-        }
-
-        if (i === 0) {
-          if (j === 0) {
-            round = " rounded-top-left";
-          } else if (j === 2) {
-            round = " rounded-top-right";
-          }
-        } else if (i === 3) {
-          if (j === 0) {
-            round = " rounded-bottom-left";
-          } else if (j === 2) {
-            round = " rounded-bottom-right";
-          }
-        }
+        let color = this.getMonthColor(month);
+        let round = this.getMonthClass(i, j);
 
         let className = "calendario-mes col" + color + round;
 
@@ -95,14 +106,14 @@ class Controls extends Component {
   }
 
   renderYears() {
-    let availableYears = Object.keys(this.props.availableDates).map((year) => parseInt(year, 10));
+    let availableYears = this.props.availableDates;
 
     let years = YEARS.map(
       (year) => {
         let className = "btn";
 
-        let active = availableYears.indexOf(year) >= 0;
-        let selected = this.props.selectedYears.indexOf(year) >= 0;
+        let active = (year in availableYears);
+        let selected = this.props.selectedYears.has(year);
 
         if (active) {
           if (selected) {
@@ -137,33 +148,65 @@ class Controls extends Component {
           <div className="badge">Grupos</div>
         </div>
         <div className="row">
-          <div className="col-10">{this.renderGroups()}</div>
+          <div className="col-9">{this.renderGroups()}</div>
           <div className="col-1 group-btn" >
             <i
-              className="fa fa-plus-square fa-align-left fa-2x"
+              className="fa fa-plus-square fa-2x"
               onClick={this.props.addGroup}></i>
           </div>
           <div className="group-btn col-1">
             <i
-              className="fa fa-minus-square fa-align-left fa-2x"
+              className="fa fa-minus-square fa-2x"
               onClick={this.props.removeGroup}></i>
+          </div>
+          <div className="group-btn col-1">
+            <Tooltip
+              placement="bottom"
+              trigger={["click"]}
+              overlay={this.getGroupTooltip()}
+            >
+              <i className="fa fa-wrench fa-2x"></i>
+            </Tooltip>
           </div>
         </div>
       </div>
     );
   }
 
+  handleChange(event) {
+    this.setState({value: event.target.value});
+  }
+
+  getGroupTooltip(){
+    let groupName = this.props.groupNames[this.props.currentGroup];
+    let nameForm = (
+      <div className="input-group mb-3">
+        <input type="text" className="form-control" onChange={this.handleChange} value={this.state.value} placeholder={groupName}/>
+        <div className="input-group-append">
+          <button
+            className="btn btn-outline-secondary"
+            type="button"
+            id="button-addon2"
+            onClick={() => this.props.renameGroup(this.state.value)}
+          >
+            Renombrar
+          </button>
+        </div>
+      </div>);
+    return nameForm;
+  }
+
   renderGroups() {
     let className = "groups breadcrumb-item";
-    let groups = this.props.groups.map(
+    let groups = Object.keys(this.props.groupNames).map(
       (g) => {
         let classNameG, content;
         if (g === this.props.currentGroup){
           classNameG = className +  ' active';
-          content = (g + 1);
+          content = this.props.groupNames[g];
         } else {
           classNameG = className;
-          content = <a href="#">{(g + 1)}</a>;
+          content = <a href="#">{this.props.groupNames[g]}</a>;
         }
 
         return (
@@ -185,11 +228,28 @@ class Controls extends Component {
   }
 
   renderDateControls() {
+    let infoYears = `Selecciona los años que desees añadir al grupo de datos. Negro indica ausencia de datos, blanco disponibilidad, amarillo seleccionado.`;
+    let infoCalendar = `Selecciona los meses que desees añadir al grupo de datos. Negro indica ausencia de datos, blanco disponibilidad, amarillo seleccionado.`;
+
     return (
       <div className="control-container container-fluid">
         <div className="row">
-          <div className="col-3"><div className="badge">Años</div></div>
-          <div className="col-9"><div className="badge">Calendario</div></div>
+          <div className="col-3">
+            <div className="badge float-left">Año</div>
+            <div className="badge float-right">
+              <Tooltip placement="top" trigger={["hover"]} overlay={<div className='app-tooltip'>{infoYears}</div>}>
+                <i className="fa fa-info"></i>
+              </Tooltip>
+            </div>
+          </div>
+          <div className="col-9">
+            <div className="badge float-left">Calendario</div>
+            <div className="badge float-right">
+              <Tooltip placement="top" trigger={["hover"]} overlay={<div className='app-tooltip'>{infoCalendar}</div>}>
+                <i className="fa fa-info"></i>
+              </Tooltip>
+            </div>
+          </div>
         </div>
         <div className="row">
           <div className="col-3">{this.renderYears()}</div>
@@ -204,10 +264,6 @@ class Controls extends Component {
       <div className="control-container container-fluid">
         <div className="row">
           <div className="col">
-            <div className="form-check">
-              <input type="checkbox" className="form-check-input" id="exampleCheck1"/>
-              <label className="form-check-label" htmlFor="exampleCheck1"><div className="badge">Estricto</div></label>
-            </div>
           </div>
           <div className="col">
             <div className="badge">Borrar selección</div>

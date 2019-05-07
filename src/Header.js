@@ -15,8 +15,10 @@ class Header extends Component {
     };
 
     this.onChange = this.onChange.bind(this);
+
     this.onSuggestionsFetchRequested = this.onSuggestionsFetchRequested.bind(this);
     this.onSuggestionsClearRequested = this.onSuggestionsClearRequested.bind(this);
+
     this.getSuggestionValue = this.getSuggestionValue.bind(this);
     this.renderSuggestion = this.renderSuggestion.bind(this);
   }
@@ -56,7 +58,6 @@ class Header extends Component {
       value,
       onChange: this.onChange
     };
-
 
     return (
       <nav className="navbar navbar-dark fixed-top bg-dark">

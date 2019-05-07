@@ -13,13 +13,15 @@ class CompositionPlot extends Component {
   constructor(props){
     super(props);
     this.data = props.data;
+    console.log(this.data);
+    let group = Object.keys(this.data)[0];
 
     this.createPlot = this.createPlot.bind(this);
     this.width = "100%";
 
     this.state = {
       type: 'Taxonomía',
-      group: 0,
+      group: group,
       labellingIsReady: false,
     };
 
@@ -146,6 +148,12 @@ class CompositionPlot extends Component {
     let datum, i, j, col, value, index, species;
 
     let group = this.state.group;
+
+    if (!(group in this.props.data)) {
+      group = Object.keys(this.props.data)[0];
+      this.setState({group: group});
+    }
+
     let data = this.props.data[group];
     let mapping = this.props.categories.species;
 
@@ -294,6 +302,9 @@ class CompositionPlot extends Component {
 
   renderButtons() {
     let options = ['Taxonomía', 'Estructura de Hábitat', 'Dieta', 'Comportamiento de Recurso', 'Percepción'];
+    let info = `
+    Sistema de clasificación a usar.
+    `;
     return (
       <List
         list={options}
@@ -301,24 +312,27 @@ class CompositionPlot extends Component {
         color={" list-group-item-warning"}
         title={"Nivel"}
         onClick={this.handleTypeClick}
+        info={info}
       />
     );
   }
 
   handleGroupClick(group) {
-    let g = parseInt(group.split(' ')[1]) - 1;
-    this.setState({group: g});
+    this.setState({group: group});
   }
 
   renderGroupButtons() {
-    let groups = Object.keys(this.props.data).map((key) => 'Grupo ' + String(parseInt(key) + 1));
+    let info = `
+    Selecciona el grupo a analizar.
+    `;
     return (
       <List
-        list={groups}
-        selectedItems={['Grupo ' + String(this.state.group + 1)]}
+        map={this.props.groupNames}
+        selectedItems={[this.state.group]}
         color={" list-group-item-success"}
         title={"Grupo"}
         onClick={this.handleGroupClick}
+        info={info}
       />
     );
   }

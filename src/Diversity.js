@@ -2,14 +2,9 @@ import React, { Component } from 'react';
 import Plot from 'react-plotly.js';
 
 import List from './List';
-import { MONTHS } from './utils';
+import { MONTHS, addRows, getMean, getStd } from './utils';
 
 import './Diversity.css';
-
-
-function addRows(row1, row2) {
-  return row1.map((x, i) => x + row2[i]);
-}
 
 
 class DiversityPlot extends Component {
@@ -209,7 +204,7 @@ class DiversityPlot extends Component {
   }
 
   getData() {
-    let group, groupData, x, y, row, value, i, key, trace, color, name, groupNmbr, agg, err, mean, std, length;
+    let group, groupData, x, y, row, value, i, key, trace, color, name, agg, err, mean, std;
     let data = this.aggregateData();
     let mapping = this.props.categories[this.state.selectedLevel];
     let plotData = [];
@@ -249,9 +244,8 @@ class DiversityPlot extends Component {
         for (key in agg) {
           x.push(key);
 
-          length = agg[key].length;
-          mean = agg[key].reduce((sum, x) => (sum + x), 0) / length;
-          std = Math.sqrt(agg[key].reduce((mse, x) => (mse + (x - mean)**2), 0) / (length - 1));
+          mean = getMean(agg[key]);
+          std = getStd(agg[key], mean);
 
           y.push(mean);
           err.push(std);
@@ -259,8 +253,7 @@ class DiversityPlot extends Component {
       }
 
       color = '#' + Math.floor(Math.random()*16777215).toString(16);
-      groupNmbr = parseInt(group, 10) + 1;
-      name = 'Grupo ' + groupNmbr;
+      name = this.props.groupNames[group];
 
       trace = {
         x: x,
@@ -329,6 +322,9 @@ class DiversityPlot extends Component {
   }
 
   renderLevels() {
+    let info = `
+    Selecciona la clasificación con la que se agrupan los llamados de murcielago. Se muestra la actividad de cada grupo definido.
+    `;
     return (
       <List
         list={this.levels}
@@ -336,6 +332,7 @@ class DiversityPlot extends Component {
         onClick={this.selectLevel}
         selectedItems={[this.state.selectedLevel]}
         color={' list-group-item-info'}
+        info={info}
       />
     );
   }
@@ -345,7 +342,7 @@ class DiversityPlot extends Component {
     if (this.state.selectedDisaggregation === 'Mes') {
       return {
         tickmode: 'array',
-        tickvals: [...MONTHS.keys()],
+        tickvals: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         ticktext: MONTHS
       };
     } else {
@@ -360,6 +357,9 @@ class DiversityPlot extends Component {
 
   renderValue() {
     let values = ['Shannon', 'Riqueza', 'Simpson', 'True Diversity'];
+    let info=`
+    Selecciona el indicador de diversidad a graficar.
+    `;
     return (
       <List
         list={values}
@@ -367,6 +367,7 @@ class DiversityPlot extends Component {
         onClick={this.selectValue}
         selectedItems={this.state.selectedValue}
         color={' list-group-item-warning'}
+        info={info}
       />
     );
   }
@@ -384,14 +385,18 @@ class DiversityPlot extends Component {
 
   renderDisaggregation() {
     let disaggregationLevels = ['Hora', 'Mes', 'Año', 'No desagregar'];
+    let info = `
+    Selecciona la escala temporal a la que se desagregan los datos.
+    `;
     return (
       <List
         list={disaggregationLevels}
-        title={'Desagregar por'}
+        title={'Desagregación temporal'}
         onClick={this.selectDisaggregation}
         selectedItems={this.state.selectedDisaggregation}
         color={' list-group-item-success'}
         disabled={this.state.disabledDisaggregations}
+        info={info}
       />
     );
   }
@@ -431,13 +436,17 @@ class DiversityPlot extends Component {
 
   renderAggregation() {
     let aggregations = ['Hora', 'Día', 'Mes', 'Año', 'Todo'];
+    let info = `
+    Selecciona la escala temporal a la cual agregar los datos. Se calcula el nivel de diversidad en esta escala.
+    `;
     return (
       <List
         list={aggregations}
-        title={'Agregar por'}
+        title={'Agregación temporal'}
         onClick={this.selectAggregation}
         selectedItems={this.state.selectedAggregation}
         color={' list-group-item-danger'}
+        info={info}
       />
     );
   }
@@ -452,7 +461,7 @@ class DiversityPlot extends Component {
             name="inlineRadioOptions"
             onClick={() => this.handleTypeClick(type[1])}
             id={type[0]} value={type[0]}/>
-          <label className="form-check-label" htmlFor={type[0]}>{type[0]}</label>
+          <label className="form-check-label" htmlFor={type[0]}><div className="badge">{type[0]}</div></label>
         </div>
       );
     });

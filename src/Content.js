@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { PulseLoader } from 'react-spinners';
 import List from './List';
 
 import ActivityPlot from './Activity';
@@ -25,6 +26,9 @@ class Content extends Component {
 
   renderGraphList() {
     const graphs = ['Actividad', 'Composición', 'Diversidad'];
+    const info = `
+    Seleccióna la gráfica a mostrar.
+    `;
 
     return (
       <List
@@ -33,6 +37,7 @@ class Content extends Component {
         selectedItems={[this.state.graph]}
         onClick={this.selectGraph}
         color={' list-group-item-primary'}
+        info={info}
       />
     );
   }
@@ -44,6 +49,7 @@ class Content extends Component {
           <ActivityPlot
             data={this.props.data}
             categories={this.props.categories}
+            groupNames={this.props.groupNames}
           />
         );
       } else if (this.state.graph === 'Composición') {
@@ -51,6 +57,7 @@ class Content extends Component {
           <CompositionPlot
             data={this.props.data}
             categories={this.props.categories}
+            groupNames={this.props.groupNames}
           />
         );
       } else if (this.state.graph === 'Diversidad') {
@@ -58,11 +65,18 @@ class Content extends Component {
           <DiversityPlot
             data={this.props.data}
             categories={this.props.categories}
+            groupNames={this.props.groupNames}
           />
         );
       }
     } else {
-      return "loading";
+      let style = {
+        width: "100%",
+        height: "100%",
+        "textAlign": "center",
+        "verticalAlign": "middle",
+      };
+      return <div style={style}><PulseLoader color={'#123abc'}/></div>;
     }
   }
 

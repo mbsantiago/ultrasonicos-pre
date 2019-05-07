@@ -2,13 +2,8 @@ import React, { Component } from 'react';
 import Plot from 'react-plotly.js';
 
 import List from './List';
-import { MONTHS } from './utils';
+import { MONTHS, addRows, getMean, getStd } from './utils';
 import './Activity.css';
-
-
-function addRows(row1, row2) {
-  return row1.map((x, i) => x + row2[i]);
-}
 
 
 class ActivityPlot extends Component {
@@ -90,7 +85,7 @@ class ActivityPlot extends Component {
   }
 
   getData() {
-    let groupData, row, x, y, trace, color, name, groupNmbr, index, datum, mean, std, err, agg, i;
+    let groupData, row, x, y, trace, color, name, index, datum, mean, std, err, agg, i;
     let data = this.aggregateData();
     let mapping = this.props.categories[this.state.selectedLevel];
     let plotData = [];
@@ -135,8 +130,8 @@ class ActivityPlot extends Component {
           for (var key in agg) {
             x.push(key);
 
-            mean = agg[key].reduce((sum, x) => (sum + x), 0) / agg[key].length;
-            std = Math.sqrt(agg[key].reduce((mse, x) => (mse + (x - mean)**2)) / (agg[key].length - 1));
+            mean = getMean(agg[key]);
+            std = getStd(agg[key], mean);
 
             y.push(mean);
             err.push(std);
@@ -144,8 +139,7 @@ class ActivityPlot extends Component {
         }
 
         color = '#' + Math.floor(Math.random()*16777215).toString(16);
-        groupNmbr = parseInt(group, 10) + 1;
-        name = category + ' grupo ' + groupNmbr;
+        name = category + ' ' + this.props.groupNames[group];
 
         trace = {
           x: x,
@@ -258,6 +252,9 @@ class ActivityPlot extends Component {
   }
 
   renderLevels() {
+    let info = `
+    Selecciona la clasificación con la que se agrupan los llamados de murcielago. Se muestra la actividad de cada grupo definido.
+    `;
     return (
       <List
         list={this.levels}
@@ -265,11 +262,15 @@ class ActivityPlot extends Component {
         onClick={this.selectLevel}
         selectedItems={[this.state.selectedLevel]}
         color={' list-group-item-info'}
+        info={info}
       />
     );
   }
 
   renderCategories() {
+    let info=`
+    Selecciona las categorías de la clasificación selecionada a incluir en la gráfica.
+    `;
     return (
       <List
         list={this.categories[this.state.selectedLevel]}
@@ -277,6 +278,8 @@ class ActivityPlot extends Component {
         onClick={this.selectCategory}
         selectedItems={this.state.selectedCategories}
         color={' list-group-item-warning'}
+        info={info}
+        buttons={true}
       />
     );
   }
@@ -290,7 +293,7 @@ class ActivityPlot extends Component {
     if (this.state.selectedDisaggregation === 'Mes') {
       return {
         tickmode: 'array',
-        tickvals: [...MONTHS.keys()],
+        tickvals: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         ticktext: MONTHS
       };
     } else {
@@ -300,14 +303,18 @@ class ActivityPlot extends Component {
 
   renderDisaggregation() {
     let disaggregationLevels = ['Hora', 'Mes', 'Año', 'No desagregar'];
+    let info = `
+    Selecciona la escala temporal a la que se desagregan los datos.
+    `;
     return (
       <List
         list={disaggregationLevels}
-        title={'Desagregar por'}
+        title={'Desagregación temporal'}
         onClick={this.selectDisaggregation}
         selectedItems={this.state.selectedDisaggregation}
         color={' list-group-item-success'}
         disabled={this.state.disabledDisaggregations}
+        info={info}
       />
     );
   }
@@ -335,13 +342,17 @@ class ActivityPlot extends Component {
 
   renderAggregation() {
     let aggregations = ['Hora', 'Día'];
+    let info = `
+    Selecciona la escala temporal a la cual agregar los datos. Se calcula el nivel de actividad en esta escala.
+    `;
     return (
       <List
         list={aggregations}
-        title={'Agregar por'}
+        title={'Agregación temporal'}
         onClick={this.selectAggregation}
         selectedItems={this.state.selectedAggregation}
         color={' list-group-item-danger'}
+        info={info}
       />
     );
   }
@@ -362,7 +373,7 @@ class ActivityPlot extends Component {
             name="inlineRadioOptions"
             onClick={() => this.handleTypeClick(type[1])}
             id={type[0]} value={type[0]}/>
-          <label className="form-check-label" htmlFor={type[0]}>{type[0]}</label>
+          <label className="form-check-label" htmlFor={type[0]}><div className="badge">{type[0]}</div></label>
         </div>
       );
     });

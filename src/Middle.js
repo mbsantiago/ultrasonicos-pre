@@ -16,11 +16,14 @@ class Middle extends Component {
             clearAnp={this.props.clearAnp}
             anpShapes={this.props.anpShapes}
             anpShapesReady={this.props.anpShapesReady}
+            centerOnGroup={this.props.centerOnGroup}
+            doneCentering={this.props.doneCentering}
         />
         </div>
         <div className="col-4 App-controls-container middle-box">
           <Controls
             removeSelection={this.props.removeSelection}
+            groupNames={this.props.groupNames}
             addGroup={this.props.addGroup}
             selectGroup={this.props.selectGroup}
             removeGroup={this.props.removeGroup}
@@ -31,6 +34,7 @@ class Middle extends Component {
             toggleYear={this.props.toggleYear}
             toggleMonth={this.props.toggleMonth}
             groups={this.props.groups}
+            renameGroup={this.props.renameGroup}
           />
         </div>
       </div>
