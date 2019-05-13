@@ -1,31 +1,35 @@
 import React, { Component } from 'react';
-import Tooltip from 'rc-tooltip';
 
+import translate from './Translator';
 import './List.css';
-import 'rc-tooltip/assets/bootstrap_white.css';
+
 
 class List extends Component {
   renderListByList(array) {
     let disabled = this.props.disabled || [];
     let items = array.map((item) => {
       let color;
-      let className = "List-item list-group-item list-group-item-action";
+      let className = "list-group-item list-group-item-action";
 
       if (disabled.indexOf(item) >= 0) {
-        className += " disabled list-group-item-dark";
+        if (this.props.removeDisabled) {
+          return "";
+        }
+
+        className += " list-group-item-secondary";
         return (
           <button
             key={item}
             type="button"
             className={className}
           >
-            {item}
+            {translate(item)}
           </button>
         );
       }
 
       if (this.props.selectedItems.indexOf(item) >= 0) {
-        color = this.props.color;
+        color = ' list-group-item-warning';
       } else {
         color = ' list-group-item-light';
       }
@@ -37,7 +41,7 @@ class List extends Component {
           type="button"
           className={className}
           onClick={() => this.props.onClick(item)}>
-          {item}
+          {translate(item)}
         </button>
       );
     });
@@ -51,6 +55,10 @@ class List extends Component {
       let className = "List-item list-group-item list-group-item-action";
 
       if (disabled.indexOf(key) >= 0) {
+        if (this.props.removeDisabled) {
+          return "";
+        }
+
         className += " disabled list-group-item-dark";
         return (
           <button
@@ -83,7 +91,7 @@ class List extends Component {
     return items;
   }
 
-  renderList() {
+  render() {
     let items;
 
     if (this.props.list) {
@@ -93,10 +101,8 @@ class List extends Component {
     }
 
     return (
-      <div className="row List-row">
-        <div className="list-group-flush list-container">
-          {items}
-        </div>
+      <div className="list-group-flush list-container mh-100">
+        {items}
       </div>
     );
   }
@@ -133,36 +139,6 @@ class List extends Component {
         this.props.onClick(key);
       }
     });
-  }
-
-  renderButtons() {
-    if (this.props.buttons) {
-      return (
-        <div className="badge float-right">
-          <span onClick={() => this.removeSelection()}>&otimes;</span>
-          <span onClick={() => this.selectAll()}>&oplus;</span>
-        </div>
-      )
-    }
-  }
-
-  render() {
-    let buttons = this.renderButtons();
-
-    return (
-      <div className='container-fluid List-external-container'>
-        <div className="row title-row clearfix">
-          <div className="badge float-left">{this.props.title}</div>
-          <div className="badge float-right">
-            <Tooltip placement="top" trigger={['hover']} overlay={<div className="app-tooltip">{this.props.info}</div>}>
-              <i className="fa fa-info"></i>
-            </Tooltip>
-          </div>
-          {buttons}
-        </div>
-        {this.renderList()}
-      </div>
-    );
   }
 }
 

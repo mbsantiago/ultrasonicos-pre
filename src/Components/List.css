@@ -1,0 +1,6 @@
+.list-container{
+  width: calc(100% + 2em);
+  overflow-y: auto;
+  margin: 0 -1em;
+  font-size: 10px;
+}

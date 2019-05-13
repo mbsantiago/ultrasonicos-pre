@@ -7,9 +7,11 @@ import Content from './Content';
 import Footer from './Footer';
 import {
   CONGLOMERATE_DATA_URL,
+  CONGLOMERATES_URL,
   ANPS_URL,
   DATA_STRUCTURE_URL,
-  MONTHS } from './utils';
+  MONTHS,
+  LABELLING_STRUCTURE_URL } from './utils';
 
 import './App.css';
 
@@ -40,6 +42,7 @@ class App extends Component {
     let groupNames = {};
     groupNames[group] = 'G-' + group.slice(0, 2);
 
+    this.loadingConglomerates = new Set();
     this.availableDates = {};
     this.availableDates[group] = {};
 
@@ -55,17 +58,22 @@ class App extends Component {
       anp: null,
       centerOnGroup: false,
       loading: false,
+      conglomeratesData: null,
+      conglomeratesDataReady: false,
+      conglomeratesError: null,
+      labellingIsReady: false,
     };
 
+    this.labellingStructure = null;
     this.categories = null;
     this.anpShapes = null;
     this.anpSuggestions = [];
     this.conglomerateData = {};
+    this.parsedConglomerateData = {};
 
     this.onSelect = this.onSelect.bind(this);
     this.selectSuggestion = this.selectSuggestion.bind(this);
     this.clearAnp = this.clearAnp.bind(this);
-    this.removeSelection = this.removeSelection.bind(this);
 
     this.selectGroup = this.selectGroup.bind(this);
     this.addGroup = this.addGroup.bind(this);
@@ -76,6 +84,57 @@ class App extends Component {
     this.toggleMonth = this.toggleMonth.bind(this);
 
     this.doneCentering = this.doneCentering.bind(this);
+
+    this.selectAllConglomerates = this.selectAllConglomerates.bind(this);
+    this.removeAllConglomerates = this.removeAllConglomerates.bind(this);
+  }
+
+  parseConglomerateData(data) {
+    let parsedData = {};
+    data.forEach((row) => {
+      parsedData[row['conglomerado_id']] = row;
+    });
+
+    return parsedData;
+  }
+
+  loadLabellingStructure() {
+    fetch(LABELLING_STRUCTURE_URL)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error('Labelling Structure: error at loading');
+        }
+      })
+      .then(data => {
+        this.labellingStructure = data;
+        this.setState({
+          labellingIsReady: true});
+      });
+  }
+
+  loadConglomerates() {
+    fetch(CONGLOMERATES_URL)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error('Conglomerates: error at loading');
+        }
+      })
+      .then(data => {
+        if (data === null) {
+          this.setState({conglomeratesError: "Null shapes"});
+        } else {
+
+          this.parsedConglomerateData = this.parseConglomerateData(data);
+
+          this.setState({
+            conglomeratesData: data,
+            conglomeratesDataReady: true});
+        }
+      });
   }
 
   aggregateGroupData() {
@@ -120,6 +179,8 @@ class App extends Component {
   componentDidMount() {
     this.loadCategories();
     this.loadAnpShapes();
+    this.loadConglomerates();
+    this.loadLabellingStructure();
   }
 
   loadCategories() {
@@ -161,6 +222,13 @@ class App extends Component {
   loadConglomerateData(id) {
     let url = CONGLOMERATE_DATA_URL + '?id=' + id;
     this.setState({loading: true});
+
+    if (this.loadingConglomerates.has(id)) {
+      return;
+    }
+
+    this.loadingConglomerates.add(id);
+
     fetch(url)
       .then(response => {
         if (response.ok) {
@@ -172,28 +240,18 @@ class App extends Component {
       .then(data => {
         if (data !== null) {
           this.conglomerateData[id] = data;
+          this.loadingConglomerates.delete(id);
+          this.updateDates();
         }
       })
       .then(() => this.checkFinishedLoading());
   }
 
-  removeSelection(){
-    this.setState(state => {
-      let selections = state.selections;
-      let selectedYears = state.selectedYears;
-      let selectedMonths = state.selectedMonths;
-
-      selections[state.currentSelection].clear();
-      selectedYears[state.currentSelection].clear();
-      selectedMonths[state.currentSelection].clear();
-      this.availableDates[state.currentSelection] = {};
-
-      return {
-        selections: selections,
-        selectedYears: selectedYears,
-        selectedMonths: selectedMonths,
-      };
-    });
+  updateDates() {
+    let selection = this.state.currentSelection;
+    let dates = this.getAvailableDates(this.state.selections[selection]);
+    this.availableDates[selection] = dates;
+    this.forceUpdate();
   }
 
   onSelect(id) {
@@ -212,7 +270,7 @@ class App extends Component {
           selection.add(id);
         }
 
-        this.availableDates[state.currentSelection] = this.getAvailableDates(selection);
+
         return {selections: all_selections};
       }
     );
@@ -426,26 +484,48 @@ class App extends Component {
   }
 
   checkFinishedLoading() {
-    let selection = this.state.selections[this.state.currentSelection];
-
-    let finished = true;
-    for (var i=0; i < selection.length; i++) {
-      if (!(selection[i] in this.conglomerateData)) {
-        finished = false;
-      }
-    }
-
-    if (finished) {
-      this.availableDates[this.state.currentSelection] = this.getAvailableDates(this.state.selections[this.state.currentSelection]);
+    if (this.loadingConglomerates.size === 0) {
       this.setState({loading: false});
     }
+  }
+
+  selectAllConglomerates() {
+    this.setState(state => {
+      let selection = new Set();
+      this.state.conglomeratesData.forEach(({conglomerado_id}) => {
+        selection.add(conglomerado_id);
+        this.loadConglomerateData(conglomerado_id);
+      });
+      state.selections[state.currentSelection] = selection;
+
+      return state;
+    });
+  }
+
+  removeAllConglomerates() {
+    this.setState(state => {
+      let selections = state.selections;
+      let selectedYears = state.selectedYears;
+      let selectedMonths = state.selectedMonths;
+
+      selections[state.currentSelection].clear();
+      selectedYears[state.currentSelection].clear();
+      selectedMonths[state.currentSelection].clear();
+      this.availableDates[state.currentSelection] = {};
+
+      return {
+        selections: selections,
+        selectedYears: selectedYears,
+        selectedMonths: selectedMonths,
+      };
+    });
   }
 
   render() {
     let selection = this.state.selections[this.state.currentSelection];
 
     return (
-      <div className="App">
+      <div className="App bg-light">
         <Header
           sugestions={this.anpSuggestions}
           selectSuggestion={this.selectSuggestion}
@@ -456,7 +536,8 @@ class App extends Component {
             onSelect={this.onSelect}
             anp={this.state.anp}
             clearAnp={this.clearAnp}
-            removeSelection={this.removeSelection}
+            selectAllConglomerates={this.selectAllConglomerates}
+            removeAllConglomerates={this.removeAllConglomerates}
             addGroup={this.addGroup}
             removeGroup={this.removeGroup}
             selectGroup={this.selectGroup}
@@ -473,12 +554,22 @@ class App extends Component {
             centerOnGroup={this.state.centerOnGroup}
             doneCentering={this.doneCentering}
             renameGroup={this.renameGroup}
+            conglomeratesData={this.state.conglomeratesData}
+            parsedConglomerateData={this.parsedConglomerateData}
+            conglomeratesDataReady={this.state.conglomeratesDataReady}
+            conglomeratesError={this.state.conglomeratesError}
+            conglomerateData={this.conglomerateData}
+            categories={this.categories}
+            labellingIsReady={this.state.labellingIsReady}
+            labellingStructure={this.labellingStructure}
           />
           <Content
             data={this.aggregateGroupData()}
             groupNames={this.state.groupNames}
             categories={this.categories}
             categoriesReady={this.state.categoriesReady}
+            labellingIsReady={this.state.labellingIsReady}
+            labellingStructure={this.labellingStructure}
           />
           <Footer/>
         </div>

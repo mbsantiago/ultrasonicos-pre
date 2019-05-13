@@ -1,13 +1,15 @@
-const BASE = 'https://coati.conabio.gob.mx/apim/';
-const DATA_STRUCTURE_URL = BASE + 'metadata/data_structure';
-const CONGLOMERATE_DATA_URL = BASE + 'data/conglomerado';
 const DEFAULT_VIEWPORT = {
   center: [23.950464, -102.532867],
   zoom: 5,
 };
+
+const BASE = 'https://coati.conabio.gob.mx/apim/';
+const DATA_STRUCTURE_URL = BASE + 'metadata/data_structure';
+const CONGLOMERATE_DATA_URL = BASE + 'data/conglomerado';
 const CONGLOMERATES_URL = BASE + "metadata/conglomerados";
 const LABELLING_STRUCTURE_URL = BASE + "metadata/labelling_structure";
-const ANPS_URL = "http://snmb.conabio.gob.mx/api_anps/v1/anps";
+const ANPS_URL =  BASE + "metadata/anp_shapes";
+
 const MONTHS = [
   "Enero",
   "Febrero",
@@ -22,6 +24,7 @@ const MONTHS = [
   "Noviembre",
   "Diciembre"
 ];
+
 const HOURS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   15, 16, 17, 18, 19, 20, 21, 22, 23];
 const YEARS = [2014, 2015, 2016, 2017];

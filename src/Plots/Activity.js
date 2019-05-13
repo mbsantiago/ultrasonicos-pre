@@ -1,8 +1,11 @@
 import React, { Component } from 'react';
 import Plot from 'react-plotly.js';
 
-import List from './List';
-import { MONTHS, addRows, getMean, getStd } from './utils';
+import List from '../Components/List';
+import Card from '../Components/Card';
+import translate from '../Components/Translator';
+
+import { MONTHS, addRows } from '../utils';
 import './Activity.css';
 
 
@@ -85,7 +88,7 @@ class ActivityPlot extends Component {
   }
 
   getData() {
-    let groupData, row, x, y, trace, color, name, index, datum, mean, std, err, agg, i;
+    let groupData, row, x, y, trace, color, name, index, datum, i;
     let data = this.aggregateData();
     let mapping = this.props.categories[this.state.selectedLevel];
     let plotData = [];
@@ -100,46 +103,18 @@ class ActivityPlot extends Component {
 
         index = mapping[category];
 
-        if (this.state.type === 'box') {
-          x = [];
-          y = [];
+        x = [];
+        y = [];
 
-          for (i = 0; i < groupData.length; i++) {
-            row = groupData[i].slice();
-            datum = this.getDisaggregator(row.pop());
-            x.push(datum);
-            y.push(row[index]);
-          }
-        } else if (this.state.type === 'bar') {
-          agg = {};
-
-          for (i = 0; i < groupData.length; i++) {
-            row = groupData[i].slice();
-            datum = this.getDisaggregator(row.pop());
-
-            if (!(datum in agg)) {
-              agg[datum] =  [];
-            }
-            agg[datum].push(row[index]);
-          }
-
-          x = [];
-          y = [];
-          err = [];
-
-          for (var key in agg) {
-            x.push(key);
-
-            mean = getMean(agg[key]);
-            std = getStd(agg[key], mean);
-
-            y.push(mean);
-            err.push(std);
-          }
+        for (i = 0; i < groupData.length; i++) {
+          row = groupData[i].slice();
+          datum = this.getDisaggregator(row.pop());
+          x.push(datum);
+          y.push(row[index]);
         }
 
-        color = '#' + Math.floor(Math.random()*16777215).toString(16);
-        name = category + ' ' + this.props.groupNames[group];
+        color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+        name = translate(category) + ' ' + this.props.groupNames[group];
 
         trace = {
           x: x,
@@ -148,14 +123,6 @@ class ActivityPlot extends Component {
           type: this.state.type,
           marker: {color: color},
         };
-
-        if (this.state.type === 'bar') {
-          trace['error_y'] = {
-            type: 'data',
-            array: err,
-            visible: true,
-          };
-        }
 
         plotData.push(trace);
       }
@@ -222,11 +189,19 @@ class ActivityPlot extends Component {
 
   renderGraph() {
     return (
-      <Plot
-        className='App-plot'
-        data={this.getData()}
-        layout={this.getLayout()}
-      />
+      <Card
+        title="Gráfica de Actividad"
+        tooltip=""
+        expand={true}
+        largeModal={true}
+      >
+        <Plot
+          className='h-100 w-100'
+          data={this.getData()}
+          layout={this.getLayout()}
+          useResizeHandler={true}
+        />
+      </Card>
     );
   }
 
@@ -256,14 +231,19 @@ class ActivityPlot extends Component {
     Selecciona la clasificación con la que se agrupan los llamados de murcielago. Se muestra la actividad de cada grupo definido.
     `;
     return (
-      <List
-        list={this.levels}
-        title={'Niveles'}
-        onClick={this.selectLevel}
-        selectedItems={[this.state.selectedLevel]}
-        color={' list-group-item-info'}
-        info={info}
-      />
+      <Card
+        title="Niveles"
+        tooltip={info}
+        fullWidth={true}
+        expand={true}
+      >
+        <List
+          list={this.levels}
+          onClick={this.selectLevel}
+          selectedItems={[this.state.selectedLevel]}
+          color={' list-group-item-info'}
+        />
+      </Card>
     );
   }
 
@@ -271,16 +251,21 @@ class ActivityPlot extends Component {
     let info=`
     Selecciona las categorías de la clasificación selecionada a incluir en la gráfica.
     `;
+
     return (
-      <List
-        list={this.categories[this.state.selectedLevel]}
-        title={'Categorías'}
-        onClick={this.selectCategory}
-        selectedItems={this.state.selectedCategories}
-        color={' list-group-item-warning'}
-        info={info}
-        buttons={true}
-      />
+      <Card
+        title="Categorías"
+        tooltip={info}
+        fullWidth={true}
+        expand={true}
+      >
+        <List
+          list={this.categories[this.state.selectedLevel]}
+          onClick={this.selectCategory}
+          selectedItems={this.state.selectedCategories}
+          buttons={true}
+        />
+      </Card>
     );
   }
 
@@ -306,16 +291,23 @@ class ActivityPlot extends Component {
     let info = `
     Selecciona la escala temporal a la que se desagregan los datos.
     `;
+
     return (
-      <List
-        list={disaggregationLevels}
-        title={'Desagregación temporal'}
-        onClick={this.selectDisaggregation}
-        selectedItems={this.state.selectedDisaggregation}
-        color={' list-group-item-success'}
-        disabled={this.state.disabledDisaggregations}
-        info={info}
-      />
+      <Card
+        title='Desagregación'
+        tooltip={info}
+        fullWidth={true}
+        expand={true}
+      >
+        <List
+          list={disaggregationLevels}
+          onClick={this.selectDisaggregation}
+          selectedItems={this.state.selectedDisaggregation}
+          color={' list-group-item-success'}
+          removeDisabled={true}
+          disabled={this.state.disabledDisaggregations}
+        />
+      </Card>
     );
   }
 
@@ -346,14 +338,19 @@ class ActivityPlot extends Component {
     Selecciona la escala temporal a la cual agregar los datos. Se calcula el nivel de actividad en esta escala.
     `;
     return (
-      <List
-        list={aggregations}
-        title={'Agregación temporal'}
-        onClick={this.selectAggregation}
-        selectedItems={this.state.selectedAggregation}
-        color={' list-group-item-danger'}
-        info={info}
-      />
+      <Card
+        title="Agregación"
+        tooltip={info}
+        fullWidth={true}
+        expand={true}
+      >
+        <List
+          list={aggregations}
+          onClick={this.selectAggregation}
+          selectedItems={this.state.selectedAggregation}
+          color={' list-group-item-danger'}
+        />
+      </Card>
     );
   }
 
@@ -363,56 +360,27 @@ class ActivityPlot extends Component {
     });
   }
 
-  renderTypeButtons() {
-    let inputs = [['caja', 'box'], ['barra', 'bar']].map((type) => {
-      return (
-        <div key={'form'+type} className="form-check form-check-inline">
-          <input
-            className="form-check-input"
-            type="radio"
-            name="inlineRadioOptions"
-            onClick={() => this.handleTypeClick(type[1])}
-            id={type[0]} value={type[0]}/>
-          <label className="form-check-label" htmlFor={type[0]}><div className="badge">{type[0]}</div></label>
-        </div>
-      );
-    });
-
-    return (
-      <div className="container type-buttons-container">
-        {inputs}
-      </div>
-    );
-  }
-
   render() {
     return (
-      <div className="container-fluid graph-container">
-        <div className="row graph-row">
-          <div className="col-2 content-column">
-            <div className='list-container-50'>
-              {this.renderLevels()}
-            </div>
-            <div className='list-container-50'>
-              {this.renderAggregation()}
-            </div>
+      <div className="row h-100">
+        <div className="col-2 pl-1 pr-1 h-100">
+          <div className="row h-50 pb-1">
+            {this.renderLevels()}
           </div>
-          <div className="col-2 content-column">
-            <div className='list-container-50'>
-              {this.renderCategories()}
-            </div>
-            <div className='list-container-50'>
-              {this.renderDisaggregation()}
-            </div>
+          <div className="row h-50 pt-1">
+            {this.renderAggregation()}
           </div>
-          <div className="col-8 plot-container">
-            <div className="row type-row">
-              {this.renderTypeButtons()}
-            </div>
-            <div className="row graph-row">
-              {this.renderGraph()}
-            </div>
+        </div>
+        <div className="col-2 pl-1 pr-1 h-100">
+          <div className="row h-50 pb-1">
+            {this.renderCategories()}
           </div>
+          <div className="row h-50 pt-1">
+            {this.renderDisaggregation()}
+          </div>
+        </div>
+        <div className="col-8 h-100">
+          {this.renderGraph()}
         </div>
       </div>
     );

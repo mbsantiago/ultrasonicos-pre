@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
 import { PulseLoader } from 'react-spinners';
-import List from './List';
 
-import ActivityPlot from './Activity';
-import CompositionPlot from './Composition';
-import DiversityPlot from './Diversity';
+import ActivityPlot from './Plots/Activity';
+import CompositionPlot from './Plots/Composition';
+import DiversityPlot from './Plots/Diversity';
 
-import './Content.css';
+import List from './Components/List';
+import Card from  './Components/Card';
 
 
 class Content extends Component {
@@ -26,18 +26,11 @@ class Content extends Component {
 
   renderGraphList() {
     const graphs = ['Actividad', 'Composición', 'Diversidad'];
-    const info = `
-    Seleccióna la gráfica a mostrar.
-    `;
-
     return (
       <List
         list={graphs}
-        title={'Gráfica'}
         selectedItems={[this.state.graph]}
         onClick={this.selectGraph}
-        color={' list-group-item-primary'}
-        info={info}
       />
     );
   }
@@ -58,6 +51,8 @@ class Content extends Component {
             data={this.props.data}
             categories={this.props.categories}
             groupNames={this.props.groupNames}
+            labellingIsReady={this.props.labellingIsReady}
+            labellingStructure={this.props.labellingStructure}
           />
         );
       } else if (this.state.graph === 'Diversidad') {
@@ -70,26 +65,29 @@ class Content extends Component {
         );
       }
     } else {
-      let style = {
-        width: "100%",
-        height: "100%",
-        "textAlign": "center",
-        "verticalAlign": "middle",
-      };
-      return <div style={style}><PulseLoader color={'#123abc'}/></div>;
+      return (
+        <div className="container text-center pt-5">
+          <PulseLoader color={'#123abc'}/>
+        </div>);
     }
   }
 
   render() {
+    const info = `Seleccióna la gráfica a mostrar.`;
+
     return (
-      <div className="App-content-container container-fluid">
-        <div className='row App-content-row'>
-          <div className="content-column col-1">
+      <div className="row p-0 h-50 pb-1">
+        <div className="col-2 h-100">
+          <Card
+            title="Gráfica"
+            tooltip={info}
+            fullWidth={true}
+          >
             {this.renderGraphList()}
-          </div>
-          <div className="content-column col-11">
-            {this.renderGraph()}
-          </div>
+          </Card>
+        </div>
+        <div className="col-10 p-0 h-100">
+          {this.renderGraph()}
         </div>
       </div>
     );

@@ -1,12 +1,12 @@
 html, body {
   height: 100%;
   margin: 0;
+  overflow-y: hidden;
 }
 
-/*.footer > .container {*/
-  /*padding-left: 15px;*/
-  /*padding-right: 15px;*/
-/*}*/
+.row {
+  margin: 0;
+}
 
 .footer {
   background-color: #f5f5f5;
@@ -19,24 +19,6 @@ html, body {
   line-height: 10px;
   position: absolute;
   width: 100%;
-}
-
-.App-plot-container {
-  height: 100%;
-}
-
-.App-content-container{
-  height: 45%;
-  margin: 0;
-}
-
-.App-content-row {
-  height: 100%;
-  padding: 0 15px;
-}
-
-.full-col {
-  height: 100%;
 }
 
 .App {
@@ -57,26 +39,6 @@ html, body {
   padding: 0;
 }
 
-.App-plot-row {
-  height: 100%;
-}
-
-.App-middle-container {
-  height: 55%;
-}
-
-.middle-box {
-  padding: 1em;
-}
-
-.App-map-container {
-  height: 100%;
-}
-
-.App-controls-container{
-  height: 100%;
-}
-
-.app-tooltip {
+.App-tooltip {
   width: 150px;
 }

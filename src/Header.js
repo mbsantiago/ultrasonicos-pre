@@ -60,10 +60,10 @@ class Header extends Component {
     };
 
     return (
-      <nav className="navbar navbar-dark fixed-top bg-dark">
+      <nav className="navbar navbar-dark fixed-top bg-dark shadow-sm">
         <a className="navbar-brand" href='/'>Datos Ultrasónicos</a>
         {this.renderLoader()}
-        <div className="btn-toolbar">
+        <div className="nav-item btn-toolbar">
           <Autosuggest
             suggestions={suggestions}
             onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
@@ -72,7 +72,7 @@ class Header extends Component {
             renderSuggestion={this.renderSuggestion}
             inputProps={inputProps}
           />
-          <button className="search-btn btn btn-outline-warning my-2 my-sm-0" onClick={() => this.handleClick(value)}>Centrar</button>
+          <button className="search-btn btn btn-link text-warning" onClick={() => this.handleClick(value)}>Centrar</button>
         </div>
       </nav>
     );

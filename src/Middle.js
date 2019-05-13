@@ -7,8 +7,8 @@ import Controls from './Controls';
 class Middle extends Component {
   render() {
     return (
-      <div className="row App-middle-container">
-        <div className="col-8 App-map-container middle-box">
+      <div className="row h-50 mb-2 mt-3">
+        <div className="col-7 App-map-container">
           <Mapa
             selection={this.props.selection}
             onSelect={this.props.onSelect}
@@ -18,11 +18,15 @@ class Middle extends Component {
             anpShapesReady={this.props.anpShapesReady}
             centerOnGroup={this.props.centerOnGroup}
             doneCentering={this.props.doneCentering}
-        />
+            conglomeratesData={this.props.conglomeratesData}
+            conglomeratesDataReady={this.props.conglomeratesDataReady}
+            conglomeratesError={this.props.conglomeratesError}
+            removeAllConglomerates={this.props.removeAllConglomerates}
+            selectAllConglomerates={this.props.selectAllConglomerates}
+          />
         </div>
-        <div className="col-4 App-controls-container middle-box">
+        <div className="col-5 h-100">
           <Controls
-            removeSelection={this.props.removeSelection}
             groupNames={this.props.groupNames}
             addGroup={this.props.addGroup}
             selectGroup={this.props.selectGroup}
@@ -35,6 +39,12 @@ class Middle extends Component {
             toggleMonth={this.props.toggleMonth}
             groups={this.props.groups}
             renameGroup={this.props.renameGroup}
+            selection={this.props.selection}
+            conglomeratesData={this.props.parsedConglomerateData}
+            data={this.props.conglomerateData}
+            categories={this.props.categories}
+            labellingIsReady={this.props.labellingIsReady}
+            labellingStructure={this.props.labellingStructure}
           />
         </div>
       </div>

@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import Plot from 'react-plotly.js';
 
-import List from './List';
-import { MONTHS, addRows, getMean, getStd } from './utils';
+import List from '../Components/List';
+import Card from '../Components/Card';
+
+import { MONTHS, addRows, getMean, getStd } from '../utils';
 
 import './Diversity.css';
 
@@ -305,12 +307,16 @@ class DiversityPlot extends Component {
   }
 
   renderGraph() {
+    let info = ""
     return (
-      <Plot
-        className='App-plot'
-        data={this.getData()}
-        layout={this.getLayout()}
-      />
+      <Card title="Gráfica de Diversidad" tooltip={info} expand={true} largeModal={true}>
+        <Plot
+          className='h-100 w-100'
+          data={this.getData()}
+          layout={this.getLayout()}
+          useResizeHandler={true}
+        />
+      </Card>
     );
   }
 
@@ -326,17 +332,19 @@ class DiversityPlot extends Component {
     Selecciona la clasificación con la que se agrupan los llamados de murcielago. Se muestra la actividad de cada grupo definido.
     `;
     return (
-      <List
-        list={this.levels}
-        title={'Niveles'}
-        onClick={this.selectLevel}
-        selectedItems={[this.state.selectedLevel]}
-        color={' list-group-item-info'}
-        info={info}
-      />
+      <Card
+        title="Niveles"
+        tooltip={info}
+        expand="true"
+      >
+        <List
+          list={this.levels}
+          onClick={this.selectLevel}
+          selectedItems={[this.state.selectedLevel]}
+        />
+      </Card>
     );
   }
-
 
   getXAxisLayout() {
     if (this.state.selectedDisaggregation === 'Mes') {
@@ -361,14 +369,17 @@ class DiversityPlot extends Component {
     Selecciona el indicador de diversidad a graficar.
     `;
     return (
-      <List
-        list={values}
-        title={'Valores'}
-        onClick={this.selectValue}
-        selectedItems={this.state.selectedValue}
-        color={' list-group-item-warning'}
-        info={info}
-      />
+      <Card
+        title="Valores"
+        tooltip={info}
+        expand={true}
+      >
+        <List
+          list={values}
+          onClick={this.selectValue}
+          selectedItems={this.state.selectedValue}
+        />
+      </Card>
     );
   }
 
@@ -389,15 +400,18 @@ class DiversityPlot extends Component {
     Selecciona la escala temporal a la que se desagregan los datos.
     `;
     return (
-      <List
-        list={disaggregationLevels}
-        title={'Desagregación temporal'}
-        onClick={this.selectDisaggregation}
-        selectedItems={this.state.selectedDisaggregation}
-        color={' list-group-item-success'}
-        disabled={this.state.disabledDisaggregations}
-        info={info}
-      />
+      <Card
+        title="Desagregación"
+        tooltip={info}
+        expand={true}
+      >
+        <List
+          list={disaggregationLevels}
+          onClick={this.selectDisaggregation}
+          selectedItems={this.state.selectedDisaggregation}
+          disabled={this.state.disabledDisaggregations}
+        />
+      </Card>
     );
   }
 
@@ -440,67 +454,41 @@ class DiversityPlot extends Component {
     Selecciona la escala temporal a la cual agregar los datos. Se calcula el nivel de diversidad en esta escala.
     `;
     return (
-      <List
-        list={aggregations}
-        title={'Agregación temporal'}
-        onClick={this.selectAggregation}
-        selectedItems={this.state.selectedAggregation}
-        color={' list-group-item-danger'}
-        info={info}
-      />
-    );
-  }
-
-  renderTypeButtons() {
-    let inputs = [['caja', 'box'], ['barra', 'bar']].map((type) => {
-      return (
-        <div key={'form'+type} className="form-check form-check-inline">
-          <input
-            className="form-check-input"
-            type="radio"
-            name="inlineRadioOptions"
-            onClick={() => this.handleTypeClick(type[1])}
-            id={type[0]} value={type[0]}/>
-          <label className="form-check-label" htmlFor={type[0]}><div className="badge">{type[0]}</div></label>
-        </div>
-      );
-    });
-
-    return (
-      <div className="container type-buttons-container">
-        {inputs}
-      </div>
+      <Card
+        title="Agregación"
+        tooltip={info}
+        expand={true}
+      >
+        <List
+          list={aggregations}
+          onClick={this.selectAggregation}
+          selectedItems={this.state.selectedAggregation}
+        />
+      </Card>
     );
   }
 
   render() {
     return (
-      <div className="container-fluid graph-container">
-        <div className="row graph-row">
-          <div className="col-2 content-column">
-            <div className='list-container-50'>
-              {this.renderLevels()}
-            </div>
-            <div className='list-container-50'>
-              {this.renderAggregation()}
-            </div>
+      <div className="row h-100">
+        <div className="col-2 pl-1 pr-1 h-100">
+          <div className='row h-50 pb-1'>
+            {this.renderLevels()}
           </div>
-          <div className="col-2 content-column">
-            <div className='list-container-50'>
-              {this.renderValue()}
-            </div>
-            <div className='list-container-50'>
-              {this.renderDisaggregation()}
-            </div>
+          <div className='row h-50 pt-1'>
+            {this.renderAggregation()}
           </div>
-          <div className="col-8 plot-container">
-            <div className="row type-row">
-              {this.renderTypeButtons()}
-            </div>
-            <div className="row graph-row">
-              {this.renderGraph()}
-            </div>
+        </div>
+        <div className="col-2 pl-1 pr-1 h-100">
+          <div className='row h-50 pb-1'>
+            {this.renderValue()}
           </div>
+          <div className='row h-50 pt-1'>
+            {this.renderDisaggregation()}
+          </div>
+        </div>
+        <div className="col-8 h-100">
+          {this.renderGraph()}
         </div>
       </div>
     );

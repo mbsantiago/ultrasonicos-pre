@@ -2,7 +2,10 @@ import React, { Component } from 'react';
 import { MONTHS, YEARS } from './utils';
 import Tooltip from 'rc-tooltip';
 
-import './Controls.css';
+import Card from './Components/Card';
+import List from './Components/List';
+import Modal from './Components/Modal';
+import GroupInfo from './GroupInfo';
 
 
 class Controls extends Component {
@@ -36,35 +39,15 @@ class Controls extends Component {
 
     if (this.availableMonths.has(month)) {
       if (this.props.selectedMonths.has(month)) {
-        color = ' bg-warning';
+        color = ' list-group-item-warning';
       } else {
-        color = ' bg-light';
+        color = ' list-group-item-light';
       }
     } else {
-      color = ' bg-dark text-white';
+      color = ' list-group-item-secondary';
     }
 
     return color;
-  }
-
-  getMonthClass(i, j) {
-    let round = "";
-
-    if (i === 0) {
-      if (j === 0) {
-        round = " rounded-top-left";
-      } else if (j === 2) {
-        round = " rounded-top-right";
-      }
-    } else if (i === 3) {
-      if (j === 0) {
-        round = " rounded-bottom-left";
-      } else if (j === 2) {
-        round = " rounded-bottom-right";
-      }
-    }
-
-    return round;
   }
 
   renderCalendar() {
@@ -78,98 +61,157 @@ class Controls extends Component {
     this.updateAvailableMonths();
 
     let rows = months.map((row, i) => {
-      let columns = row.map((month, j) => {
+      let columns = row.map((month) => {
         let color = this.getMonthColor(month);
-        let round = this.getMonthClass(i, j);
-
-        let className = "calendario-mes col" + color + round;
 
         return (
-          <td
-            key={'mes'+month}
-            className={className}
+          <div
+            key={`mes-${month}`}
+            className={`col p-1 m-1 ${color}`}
             onClick={() => this.props.toggleMonth(month)}>
             {month}
-          </td>);
+          </div>);
       });
 
-      return (<tr key={'row' + i}>{columns}</tr>);
+      return (<div className="row" key={'row' + i}>{columns}</div>);
     });
 
     return (
-      <table className="calendario table table-hover">
-        <tbody>
-          {rows}
-        </tbody>
-      </table>
+      <div className="container p-0 text-center">
+        {rows}
+      </div>
     );
   }
 
   renderYears() {
     let availableYears = this.props.availableDates;
-
-    let years = YEARS.map(
-      (year) => {
-        let className = "btn";
-
-        let active = (year in availableYears);
-        let selected = this.props.selectedYears.has(year);
-
-        if (active) {
-          if (selected) {
-            className = className + " btn-warning";
-          } else {
-            className = className + " btn-light";
-          }
-        } else {
-          className = className + " btn-dark";
-        }
-        return (
-          <button
-            key={'year' + year}
-            type="button"
-            className={className}
-            onClick={() => this.props.toggleYear(year)}>
-            {year}
-          </button>);
-      }
-    );
+    let selectedItems = [...this.props.selectedYears.values()];
+    let disabled = YEARS.filter(year => !(year in availableYears));
 
     return (
-      <div className="btn-group-vertical anos">
-        {years}
-      </div>);
+      <List
+        list={YEARS}
+        selectedItems={selectedItems}
+        buttons={true}
+        disabled={disabled}
+        onClick={(year) => this.props.toggleYear(year)}
+      />);
+  }
+
+  renderGroupList() {
+    return Object.keys(this.props.groupNames).map(
+      (g) => {
+        let content = this.props.groupNames[g];
+        let active = g === this.props.currentGroup ? " active" : ""
+
+        return (
+          <div
+            key={'group' + g}
+            className={`dropdown-item w-100 text-truncate${active}`}
+            onClick={() => this.props.selectGroup(g)}>
+            {content}
+          </div>);
+      }
+    );
   }
 
   renderGroupControls() {
+    let name = this.props.groupNames[this.props.currentGroup];
+    let groupInfo = "Un grupo es una colección de bla bla bla";
+
     return (
-      <div className="control-container container-fluid group-controls">
-        <div className="row">
-          <div className="badge">Grupos</div>
-        </div>
-        <div className="row">
-          <div className="col-9">{this.renderGroups()}</div>
-          <div className="col-1 group-btn" >
-            <i
-              className="fa fa-plus-square fa-2x"
-              onClick={this.props.addGroup}></i>
-          </div>
-          <div className="group-btn col-1">
-            <i
-              className="fa fa-minus-square fa-2x"
-              onClick={this.props.removeGroup}></i>
-          </div>
-          <div className="group-btn col-1">
+      <Card title="">
+        <ul className="nav justify-content-between h-100 w-100">
+          <p className="nav-item btn text-center align-middle h-100 pl-0" style={{fontSize: '15px'}}>
             <Tooltip
               placement="bottom"
+              trigger={["hover"]}
+              overlay={<div className="App-tooltip">{groupInfo}</div>}
+            >
+              <span>Grupo</span>
+            </Tooltip>
+          </p>
+          <li className="nav-item" style={{width: '40%'}}>
+            <div className="dropdown">
+              <Tooltip
+                placement="top"
+                trigger={["hover"]}
+                overlay="seleccionar grupo"
+              >
+                <button className="btn btn-link dropdown-toggle w-100 text-truncate" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  {name}
+                </button>
+              </Tooltip>
+              <div className="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
+                {this.renderGroupList()}
+              </div>
+            </div>
+          </li>
+          <li className="nav-item">
+            <Tooltip
+              placement="bottom"
+              trigger={["hover"]}
+              overlay="Añadir grupo"
+            >
+              <div className="btn btn-link nav-link">
+                <i
+                  className="fas fa-plus"
+                  onClick={this.props.addGroup}>
+                </i>
+              </div>
+            </Tooltip>
+          </li>
+          <li className="nav-item">
+            <Tooltip
+              placement="bottom"
+              trigger={["hover"]}
+              overlay="Eliminar grupo"
+            >
+              <div className="btn btn-link nav-link">
+                <i
+                  className="fas fa-minus"
+                  onClick={this.props.removeGroup}>
+                </i>
+              </div>
+            </Tooltip>
+          </li>
+          <li className="nav-item">
+            <Tooltip
+              placement="bottom"
+              trigger={["hover"]}
+              overlay="Información del grupo"
+            >
+              <div className="btn btn-link nav-link" data-toggle="modal" data-target="#groupInfo">
+                <i className="fas fa-info"></i>
+              </div>
+            </Tooltip>
+          </li>
+          <li className="nav-item pr-0">
+            <Tooltip
+              placement="left"
               trigger={["click"]}
               overlay={this.getGroupTooltip()}
             >
-              <i className="fa fa-wrench fa-2x"></i>
+              <div className="btn btn-link nav-link">
+                <i className="fas fa-edit"></i>
+              </div>
             </Tooltip>
-          </div>
-        </div>
-      </div>
+          </li>
+        </ul>
+        <Modal title="Información de grupo" id="groupInfo">
+          <GroupInfo
+            selection={this.props.selection}
+            data={this.props.data}
+            conglomeratesData={this.props.conglomeratesData}
+            name={name}
+            categories={this.props.categories}
+            labellingIsReady={this.props.labellingIsReady}
+            labellingStructure={this.props.labellingStructure}
+            selectedYears={this.props.selectedYears}
+            selectedMonths={this.props.selectedMonths}
+          />
+        </Modal>
+      </Card>
     );
   }
 
@@ -197,7 +239,7 @@ class Controls extends Component {
   }
 
   renderGroups() {
-    let className = "groups breadcrumb-item";
+    let className = "groups breadcrumb-item align-middle";
     let groups = Object.keys(this.props.groupNames).map(
       (g) => {
         let classNameG, content;
@@ -206,7 +248,7 @@ class Controls extends Component {
           content = this.props.groupNames[g];
         } else {
           classNameG = className;
-          content = <a href="#">{this.props.groupNames[g]}</a>;
+          content = <div className="btn btn-link">{this.props.groupNames[g]}</div>;
         }
 
         return (
@@ -220,8 +262,8 @@ class Controls extends Component {
     );
 
     return (
-      <nav aria-label="breadcrumb">
-        <ol className="breadcrumb">
+      <nav className="h-100" aria-label="breadcrumb">
+        <ol className="breadcrumb mb-0 h-100">
           {groups}
         </ol>
       </nav>);
@@ -232,61 +274,38 @@ class Controls extends Component {
     let infoCalendar = `Selecciona los meses que desees añadir al grupo de datos. Negro indica ausencia de datos, blanco disponibilidad, amarillo seleccionado.`;
 
     return (
-      <div className="control-container container-fluid">
-        <div className="row">
-          <div className="col-3">
-            <div className="badge float-left">Año</div>
-            <div className="badge float-right">
-              <Tooltip placement="top" trigger={["hover"]} overlay={<div className='app-tooltip'>{infoYears}</div>}>
-                <i className="fa fa-info"></i>
-              </Tooltip>
-            </div>
-          </div>
-          <div className="col-9">
-            <div className="badge float-left">Calendario</div>
-            <div className="badge float-right">
-              <Tooltip placement="top" trigger={["hover"]} overlay={<div className='app-tooltip'>{infoCalendar}</div>}>
-                <i className="fa fa-info"></i>
-              </Tooltip>
-            </div>
-          </div>
+      <React.Fragment>
+        <div className="col-3 pl-0 pr-1 h-100">
+          <Card
+            title="Año"
+            tooltip={infoYears}
+          >
+            {this.renderYears()}
+          </Card>
         </div>
-        <div className="row">
-          <div className="col-3">{this.renderYears()}</div>
-          <div className="col-9">{this.renderCalendar()}</div>
+        <div className="col-9 pr-0 pl-1 h-100">
+          <Card
+            title="Calendario"
+            tooltip={infoCalendar}
+          >
+            {this.renderCalendar()}
+          </Card>
         </div>
-      </div>
-    );
-  }
-
-  renderOtherControls() {
-    return (
-      <div className="control-container container-fluid">
-        <div className="row">
-          <div className="col">
-          </div>
-          <div className="col">
-            <div className="badge">Borrar selección</div>
-            <button
-              onClick={this.props.removeSelection}
-              type="button"
-              className="close"
-              aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      </React.Fragment>
     );
   }
 
   render() {
     return (
-      <div className="container-fluid">
-        {this.renderGroupControls()}
-        {this.renderDateControls()}
-        {this.renderOtherControls()}
-      </div>);
+      <React.Fragment>
+        <div className="row mb-1 h-25">
+          {this.renderGroupControls()}
+        </div>
+        <div className="row h-75">
+          {this.renderDateControls()}
+        </div>
+      </React.Fragment>
+    );
   }
 }
 

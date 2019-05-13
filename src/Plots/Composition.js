@@ -2,9 +2,10 @@ import React, { Component } from 'react';
 
 import * as d3 from 'd3';
 import * as d3sankey from 'd3-sankey';
-import List from './List';
 
-import { LABELLING_STRUCTURE_URL} from './utils';
+import List from '../Components/List';
+import Card from '../Components/Card';
+import translate from '../Components/Translator';
 
 import './Composition.css';
 
@@ -13,7 +14,6 @@ class CompositionPlot extends Component {
   constructor(props){
     super(props);
     this.data = props.data;
-    console.log(this.data);
     let group = Object.keys(this.data)[0];
 
     this.createPlot = this.createPlot.bind(this);
@@ -22,54 +22,36 @@ class CompositionPlot extends Component {
     this.state = {
       type: 'Taxonomía',
       group: group,
-      labellingIsReady: false,
     };
 
     this.myRef = React.createRef();
     this.handleTypeClick = this.handleTypeClick.bind(this);
     this.handleGroupClick = this.handleGroupClick.bind(this);
 
-    this.labellingStructure = null;
     this.structureIndices = null;
     this.protoLinks = null;
     this.height = "100%";
   }
 
-  loadLabellingStructure() {
-    fetch(LABELLING_STRUCTURE_URL)
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('Labelling Structure: error at loading');
-        }
-      })
-      .then(data => {
-        this.labellingStructure = data;
-        [this.structureIndices, this.protoLinks] = this.buildStructureIndices(this.state.type);
-
-        this.setState({
-          labellingIsReady: true});
-      });
-  }
-
   componentDidMount() {
-    this.loadLabellingStructure();
+    if (this.props.labellingIsReady) {
+      [this.structureIndices, this.protoLinks] = this.buildStructureIndices(this.state.type);
 
-    if (this.state.labellingIsReady) {
       this.createPlot();
     }
   }
 
   componentDidUpdate() {
-    if (this.state.labellingIsReady) {
+    if (this.props.labellingIsReady) {
+      [this.structureIndices, this.protoLinks] = this.buildStructureIndices(this.state.type);
+
       this.createPlot();
     }
   }
 
   buildStructureIndices(type) {
     let species, aux;
-    let labelling = this.labellingStructure;
+    let labelling = this.props.labellingStructure;
     let index = 0;
     let structureIndices = {};
     let protoLinks = [];
@@ -109,7 +91,7 @@ class CompositionPlot extends Component {
         structureIndices[species] = [index];
         index++;
 
-      } else if (type === 'Comportamiento de Recurso') {
+      } else if (type === 'Comportamiento de forrajeo') {
         aux = labelling[species].eco_feat.resource_behaviour[0];
         protoLinks.push({source: species, target: aux, value: 0});
         structureIndices[species] = [index];
@@ -286,7 +268,7 @@ class CompositionPlot extends Component {
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
       .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-      .text(d => d.name);
+      .text(d => translate(d.name));
 
     svg.attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
@@ -301,19 +283,22 @@ class CompositionPlot extends Component {
   }
 
   renderButtons() {
-    let options = ['Taxonomía', 'Estructura de Hábitat', 'Dieta', 'Comportamiento de Recurso', 'Percepción'];
+    let options = ['Taxonomía', 'Estructura de Hábitat', 'Dieta', 'Comportamiento de forrajeo', 'Percepción'];
     let info = `
     Sistema de clasificación a usar.
     `;
     return (
-      <List
-        list={options}
-        selectedItems={[this.state.type]}
-        color={" list-group-item-warning"}
-        title={"Nivel"}
-        onClick={this.handleTypeClick}
-        info={info}
-      />
+      <Card
+        title="Nivel"
+        tooltip={info}
+        expand={true}
+      >
+        <List
+          list={options}
+          selectedItems={[this.state.type]}
+          onClick={this.handleTypeClick}
+        />
+      </Card>
     );
   }
 
@@ -326,42 +311,47 @@ class CompositionPlot extends Component {
     Selecciona el grupo a analizar.
     `;
     return (
-      <List
-        map={this.props.groupNames}
-        selectedItems={[this.state.group]}
-        color={" list-group-item-success"}
-        title={"Grupo"}
-        onClick={this.handleGroupClick}
-        info={info}
-      />
+      <Card
+        title="Grupo"
+        tooltip={info}
+        expand={true}
+      >
+        <List
+          map={this.props.groupNames}
+          selectedItems={[this.state.group]}
+          onClick={this.handleGroupClick}
+        />
+      </Card>
     );
   }
 
   renderGraph() {
     return (
-      <svg
-        ref={this.myRef}
-        width={this.width}
-        height={this.height}
-        margin={10}
-      >
-      </svg>
+      <Card title="Gráfica de Composición" tooltip="">
+        <div className="svg-container p-0 m-0">
+          <svg
+            ref={this.myRef}
+            width={this.width}
+            height={this.height}
+            margin={10}
+          >
+          </svg>
+        </div>
+      </Card>
     );
   }
 
   render() {
     return (
-      <div className='container-fluid graph-container'>
-        <div className="row graph-row">
-          <div className="col-2 content-column">
-            {this.renderButtons()}
-          </div>
-          <div className="col-1 content-column">
-            {this.renderGroupButtons()}
-          </div>
-          <div className="col-9 graph-container svg-container">
-            {this.renderGraph()}
-          </div>
+      <div className='row h-100'>
+        <div className="col-2 h-100">
+          {this.renderButtons()}
+        </div>
+        <div className="col-2 h-100">
+          {this.renderGroupButtons()}
+        </div>
+        <div className="col-8 h-100">
+          {this.renderGraph()}
         </div>
       </div>);
   }
